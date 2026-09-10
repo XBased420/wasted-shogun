@@ -17,6 +17,11 @@
    WA$TED x TRINITY : SHOGUN
    Single-file event landing page. Inline CSS/JS only.
    External deps: Google Fonts + SoundCloud embed.
+
+   Motion runs on a beat clock derived from the SoundCloud
+   widget's playback position (BPM constant below). Cross-origin
+   embeds can't be tapped with Web Audio, so this is a timed
+   sync, not a frequency analyser — but it lands on the kick.
    ============================================================ */
 
 :root{
@@ -28,11 +33,23 @@
   --hair:rgba(237,237,232,.16);
   --beat:387ms;              /* ~155 BPM */
   --bar:3.096s;              /* 8 beats  */
+
+  /* live motion channels, written by the beat clock */
+  --kick:0;                  /* 1 on the beat, decays to 0     */
+  --hit:0;                   /* 1 on the downbeat of each bar  */
+  --energy:0;                /* 0 idle, 1 while playing        */
+  --px:0;                    /* pointer parallax, -1..1        */
+  --py:0;
+  --shake:0;                 /* scroll-velocity glitch, 0..1   */
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+html{
+  scroll-behavior:smooth;
+  -webkit-text-size-adjust:100%;
+  overflow-x:hidden;         /* nothing may bleed sideways */
+}
 
 body{
   background:var(--ink);
@@ -59,24 +76,25 @@ a{color:inherit}
   text-transform:uppercase;
   color:var(--paper-dim);
 }
+.fitline{display:inline-block;white-space:nowrap;max-width:100%}
+
 .slam-head{
   font-family:'Anton',Impact,sans-serif;
-  font-size:clamp(2.4rem,8vw,5.4rem);
+  font-size:clamp(2.2rem,7.4vw,5.4rem);
   line-height:.86;
   letter-spacing:-.015em;
   text-transform:uppercase;
+  max-width:100%;
 }
-.rule{height:1px;background:var(--hair);border:0}
 
 /* ============================================================
-   FIXED TEXTURE OVERLAYS (grain / scanlines / strobe)
-   All three are compositor-only: opacity + background-position.
+   FIXED TEXTURE OVERLAYS
    ============================================================ */
 .fx{position:fixed;inset:0;pointer-events:none;z-index:9000}
 
 #grain{
   z-index:9001;
-  opacity:.30;
+  opacity:calc(.26 + var(--energy) * .12);
   mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size:260px 260px;
@@ -112,7 +130,7 @@ a{color:inherit}
   from{transform:translate3d(0,0,0)}
   to  {transform:translate3d(0,4px,0)}
 }
-/* slow bright band sweeping down — CRT roll */
+
 #roll{
   z-index:9003;
   opacity:.055;
@@ -151,6 +169,33 @@ a{color:inherit}
   94%  {opacity:0}
 }
 
+/* beat flash — the room light hitting on the kick */
+#beat{
+  z-index:9005;
+  background:radial-gradient(ellipse 80% 60% at 50% 38%, rgba(237,237,232,.55) 0%, rgba(200,16,46,.22) 45%, transparent 72%);
+  opacity:calc(var(--kick) * .085 + var(--hit) * .075);
+  will-change:opacity;
+}
+
+/* VHS tracking tear — fires on phrase boundaries */
+#tear{
+  z-index:9006;
+  height:14vh;inset:auto 0 auto 0;
+  opacity:0;
+  background:
+    linear-gradient(to bottom, transparent, rgba(237,237,232,.10) 40%, rgba(200,16,46,.16) 52%, transparent),
+    repeating-linear-gradient(to bottom, rgba(0,229,208,.10) 0 2px, transparent 2px 5px);
+  will-change:transform,opacity;
+}
+#tear.go{animation:tearsweep 620ms cubic-bezier(.7,0,.2,1) 1 both}
+@keyframes tearsweep{
+  0%  {opacity:0;   transform:translate3d(0,-20vh,0) scaleY(.4)}
+  12% {opacity:1;   transform:translate3d(-8px,10vh,0) scaleY(1.6)}
+  40% {opacity:.85; transform:translate3d(9px,44vh,0) scaleY(.7)}
+  70% {opacity:.6;  transform:translate3d(-5px,76vh,0) scaleY(1.3)}
+  100%{opacity:0;   transform:translate3d(0,110vh,0) scaleY(.5)}
+}
+
 /* ============================================================
    HERO
    ============================================================ */
@@ -169,22 +214,29 @@ a{color:inherit}
 /* --- procedural photography stack (no raster assets) --- */
 .plate{position:absolute;inset:0;z-index:-3;overflow:hidden;background:#000}
 
-/* smoke / film-emulsion field, crushed to high-contrast B&W */
+/* camera: carries parallax + the beat push, so the crop box stays put */
+.plate__cam{
+  position:absolute;inset:-6%;
+  transform:
+    translate3d(calc(var(--px) * -16px), calc(var(--py) * -11px), 0)
+    scale(calc(1 + var(--kick) * .014 + var(--hit) * .010));
+  will-change:transform;
+}
+
 .plate__smoke{
-  position:absolute;inset:-14%;
+  position:absolute;inset:-10%;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.009' numOctaves='5' seed='19'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='900' height='900' filter='url(%23s)'/%3E%3C/svg%3E");
   background-size:cover;
-  filter:contrast(2.9) brightness(.62);
+  filter:contrast(2.9) brightness(calc(.60 + var(--kick) * .14));
   opacity:.9;
   animation:kenburns 24s ease-in-out infinite alternate;
-  will-change:transform;
+  will-change:transform,filter;
 }
 @keyframes kenburns{
   from{transform:scale(1.02) translate3d(-1.2%,1%,0)}
   to  {transform:scale(1.16) translate3d(1.6%,-2.2%,0)}
 }
 
-/* backlight behind the figure — gives the silhouette its rim */
 .plate__light{
   position:absolute;inset:0;
   background:
@@ -192,15 +244,15 @@ a{color:inherit}
       rgba(237,237,232,.60) 0%,
       rgba(237,237,232,.16) 42%,
       rgba(237,237,232,0) 72%);
+  opacity:calc(.85 + var(--kick) * .30);
   animation:kenburns 24s ease-in-out infinite alternate;
-  will-change:transform;
+  will-change:transform,opacity;
 }
 
-/* the subject */
 .plate__figure{
   position:absolute;
   left:50%;bottom:0;
-  width:min(112vh,140%);
+  width:min(105vh,132%);
   height:92%;
   transform:translateX(-50%);
   animation:figuredrift 24s ease-in-out infinite alternate;
@@ -211,7 +263,7 @@ a{color:inherit}
   to  {transform:translateX(-50%) scale(1.07) translateY(-1.5%)}
 }
 
-/* duotone wash + hard vignette */
+/* duotone wash + hard vignette — stays locked to the frame */
 .plate__grade{
   position:absolute;inset:0;
   background:
@@ -227,10 +279,11 @@ a{color:inherit}
 
 .wordmark{
   font-family:'Anton',Impact,sans-serif;
-  font-size:clamp(1rem,2.7vw,1.5rem);
+  font-size:clamp(.95rem,2.5vw,1.5rem);
   letter-spacing:.06em;
   text-transform:uppercase;
   line-height:1;
+  white-space:nowrap;
 }
 .wordmark em{font-style:normal;color:var(--blood)}
 .hero__top .kicker{text-align:right;line-height:1.9}
@@ -239,25 +292,34 @@ a{color:inherit}
 
 .presents{
   font-family:'Space Mono',monospace;
-  font-size:clamp(.6rem,1.6vw,.8rem);
-  letter-spacing:.42em;
+  font-size:clamp(.55rem,1.5vw,.8rem);
+  letter-spacing:.38em;
   text-transform:uppercase;
   color:#C4C4BF;
   text-shadow:0 2px 14px rgba(0,0,0,.95);
   margin-bottom:clamp(6px,1.4vh,14px);
 }
 
-/* --- the glitching headline --- */
+/* --- the glitching headline ---
+   Sized off the container, never the raw viewport, and capped
+   so the word always keeps a gutter on both sides. */
 .shogun{
   position:relative;
   display:inline-block;
+  max-width:100%;
   font-family:'Anton',Impact,sans-serif;
-  font-size:clamp(4rem,19.8vw,16rem);
-  line-height:.8;
-  letter-spacing:-.028em;
+  font-size:min(17.2vw, 13rem);
+  line-height:.84;
+  letter-spacing:-.03em;
   text-transform:uppercase;
+  white-space:nowrap;
   color:var(--paper);
-  text-shadow:0 0 60px rgba(0,0,0,.9);
+  text-shadow:
+    0 0 60px rgba(0,0,0,.9),
+    calc(var(--kick) * -3px) 0 rgba(255,30,60,calc(var(--energy) * .55)),
+    calc(var(--kick) * 3px) 0 rgba(0,229,208,calc(var(--energy) * .40));
+  transform:translate3d(calc(var(--shake) * -6px),0,0) scale(calc(1 + var(--hit) * .012));
+  will-change:transform,text-shadow;
 }
 .shogun::before,.shogun::after{
   content:attr(data-text);
@@ -310,10 +372,10 @@ a{color:inherit}
 .hero__meta{
   margin-top:clamp(12px,2.4vh,22px);
   display:flex;justify-content:center;align-items:center;
-  gap:clamp(10px,2.4vw,22px);
+  gap:clamp(8px,2.2vw,22px);
   flex-wrap:wrap;
   font-family:'Space Mono',monospace;
-  font-size:clamp(.66rem,1.7vw,.9rem);
+  font-size:clamp(.6rem,1.6vw,.9rem);
   letter-spacing:.2em;
   text-transform:uppercase;
 }
@@ -352,33 +414,33 @@ a{color:inherit}
   0%,100%{box-shadow:0 0 0 0 var(--glow),0 0 22px -6px var(--glow)}
   50%    {box-shadow:0 0 0 6px rgba(200,16,46,0),0 0 46px -2px var(--glow)}
 }
+/* while the track runs, the CTA glow rides the kick instead */
+html.playing .btn{
+  animation:none;
+  box-shadow:
+    0 0 calc(18px + var(--kick) * 44px) calc(-8px + var(--kick) * 6px) var(--glow),
+    0 0 0 calc(var(--hit) * 5px) rgba(200,16,46,calc(.35 - var(--hit) * .35));
+}
 .btn:hover,.btn:focus-visible{background:var(--paper);color:var(--ink);border-color:var(--paper);transform:translate3d(0,-2px,0)}
 .btn:active{transform:translate3d(0,1px,0)}
 .btn .arrow{font-family:'Space Mono',monospace;font-size:.8em}
-
-.btn--ghost{
-  background:transparent;
-  color:var(--paper);
-  border:1px solid var(--hair);
-  animation:none;
-}
-.btn--ghost:hover,.btn--ghost:focus-visible{background:var(--paper);color:var(--ink)}
 
 /* ============================================================
    PRESS PLAY / audio module
    ============================================================ */
 .audio{
   display:flex;flex-direction:column;gap:10px;
-  min-width:min(320px,100%);
+  width:min(380px,100%);
   text-align:left;
 }
 
 .press{
   position:relative;
   display:inline-flex;align-items:center;gap:14px;
-  align-self:flex-start;
+  align-self:stretch;
+  justify-content:flex-start;
   font-family:'Anton',Impact,sans-serif;
-  font-size:clamp(.95rem,2.2vw,1.2rem);
+  font-size:clamp(.9rem,2.1vw,1.2rem);
   letter-spacing:.14em;
   text-transform:uppercase;
   padding:.7em 1.3em .7em 1.1em;
@@ -389,7 +451,6 @@ a{color:inherit}
   overflow:hidden;
   animation:kick calc(var(--beat) * 2) steps(1,end) infinite;
 }
-/* two-beat kick pattern: BOOM . boom . */
 @keyframes kick{
   0%   {box-shadow:inset 0 0 0 0 rgba(237,237,232,.9),0 0 0 0 rgba(237,237,232,.5);transform:scale(1.018)}
   6%   {box-shadow:inset 0 0 0 0 rgba(237,237,232,0),0 0 0 10px rgba(237,237,232,0);transform:scale(1)}
@@ -402,9 +463,13 @@ a{color:inherit}
   border-color:var(--blood);
   color:var(--blood-hot);
   animation:none;
+  transform:scale(calc(1 + var(--kick) * .022));
+  box-shadow:
+    0 0 0 calc(var(--kick) * 7px) rgba(200,16,46,calc(.28 - var(--kick) * .28)),
+    inset 0 0 calc(var(--kick) * 26px) -6px rgba(200,16,46,.55);
+  will-change:transform,box-shadow;
 }
 .press.is-playing:hover{background:var(--blood);color:var(--paper)}
-/* strobe wipe behind the label */
 .press::after{
   content:"";position:absolute;inset:0;
   background:linear-gradient(90deg,transparent,rgba(237,237,232,.22),transparent);
@@ -430,7 +495,7 @@ a{color:inherit}
   background:transparent;
 }
 
-/* pseudo-waveform: bars fill red with playback */
+/* pseudo-waveform: bars fill red with playback and jump on the kick */
 .wave{
   display:flex;align-items:flex-end;gap:2px;
   height:34px;
@@ -447,6 +512,11 @@ a{color:inherit}
 }
 .wave span.on{background:var(--blood)}
 .wave.is-live span.on:nth-child(3n){background:var(--blood-hot)}
+.wave.is-live span.on{transform:scaleY(calc(1 + var(--kick) * .35))}
+.wave.is-live span.head{
+  background:var(--paper);
+  transform:scaleY(calc(1 + var(--kick) * .9));
+}
 
 .audio__label{
   display:flex;justify-content:space-between;gap:12px;
@@ -458,18 +528,19 @@ a{color:inherit}
 }
 .audio__label b{color:var(--paper);font-weight:400}
 
-/* the real SoundCloud player, reduced to a hairline strip */
+/* the real SoundCloud player, kept at its own mini height so
+   nothing is ever cropped mid-element */
 .sc{
   position:relative;
   height:20px;
   overflow:hidden;
   border-top:1px solid rgba(200,16,46,.45);
-  opacity:.5;
+  opacity:.45;
   transition:opacity .25s;
   filter:invert(1) contrast(1.05) saturate(1.15);
 }
-.sc:hover{opacity:.95}
-.sc iframe{width:100%;height:120px;border:0;margin-top:-46px;display:block}
+.sc:hover{opacity:.9}
+.sc iframe{width:100%;height:20px;border:0;display:block}
 .sc__credit{
   font-family:'Space Mono',monospace;
   font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;
@@ -485,23 +556,18 @@ section{position:relative;z-index:1}
 .sec__head{display:flex;align-items:flex-start;gap:18px;margin-bottom:clamp(26px,5vh,52px);flex-wrap:wrap}
 .sec__head .num{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:.3em;color:var(--blood);padding-top:.7em;flex:none}
 
-/* kinetic slam-in */
 .stamp{
   opacity:0;
   transform:translate3d(0,26px,0) scaleY(1.42);
   transform-origin:bottom;
 }
-.stamp.slam{
-  animation:slam 300ms cubic-bezier(.9,0,.1,1) both;
-}
+.stamp.slam{animation:slam 300ms cubic-bezier(.9,0,.1,1) both}
 @keyframes slam{
   0%  {opacity:0;transform:translate3d(0,26px,0) scaleY(1.42)}
   55% {opacity:1;transform:translate3d(0,-4px,0) scaleY(.92)}
   72% {opacity:1;transform:translate3d(0,1px,0) scaleY(1.03)}
   100%{opacity:1;transform:translate3d(0,0,0) scaleY(1)}
 }
-/* red impact flash on the slam */
-.stamp.slam::selection{background:var(--blood)}
 .flashline{
   position:absolute;left:0;right:0;height:2px;background:var(--blood);
   transform:scaleX(0);transform-origin:left;
@@ -517,10 +583,11 @@ section{position:relative;z-index:1}
 .lineup{border-top:1px solid var(--hair)}
 .headliner{
   font-family:'Anton',Impact,sans-serif;
-  font-size:clamp(3.4rem,15vw,11rem);
-  line-height:.82;
+  font-size:min(13vw,11rem);
+  line-height:.84;
   letter-spacing:-.03em;
   text-transform:uppercase;
+  max-width:100%;
 }
 .headliner .tag{
   display:block;
@@ -556,7 +623,7 @@ section{position:relative;z-index:1}
 .support__act:hover{background:#0C0C0C}
 .support__act .name{
   font-family:'Anton',Impact,sans-serif;
-  font-size:clamp(1.7rem,5vw,2.9rem);
+  font-size:clamp(1.6rem,4.6vw,2.9rem);
   line-height:.9;
   text-transform:uppercase;
   letter-spacing:-.01em;
@@ -571,7 +638,7 @@ section{position:relative;z-index:1}
   background:var(--hair);
   border:1px solid var(--hair);
 }
-.cell{background:var(--ink);padding:clamp(22px,3.4vw,34px);display:flex;flex-direction:column;gap:10px}
+.cell{background:var(--ink);padding:clamp(22px,3.4vw,34px);display:flex;flex-direction:column;gap:10px;min-width:0}
 .cell dt{
   font-family:'Space Mono',monospace;
   font-size:.66rem;letter-spacing:.3em;text-transform:uppercase;
@@ -579,7 +646,7 @@ section{position:relative;z-index:1}
 }
 .cell dd{
   font-family:'Anton',Impact,sans-serif;
-  font-size:clamp(1.15rem,2.6vw,1.6rem);
+  font-size:clamp(1.1rem,2.4vw,1.6rem);
   letter-spacing:.01em;
   text-transform:uppercase;
   line-height:1.06;
@@ -607,11 +674,12 @@ section{position:relative;z-index:1}
   border-block:1px solid var(--blood);
   background:
     repeating-linear-gradient(135deg,
-      rgba(200,16,46,.16) 0 14px,
+      rgba(200,16,46,calc(.14 + var(--hit) * .22)) 0 14px,
       transparent 14px 28px);
   overflow:hidden;
   padding-block:16px;
   white-space:nowrap;
+  max-width:100%;
 }
 .strip__track{display:inline-flex;animation:marquee 34s linear infinite;will-change:transform}
 .strip__set{display:inline-flex;align-items:center;flex:none}
@@ -637,11 +705,12 @@ section{position:relative;z-index:1}
 }
 .closer .big{
   font-family:'Anton',Impact,sans-serif;
-  font-size:clamp(2.6rem,10vw,7rem);
-  line-height:.86;
+  font-size:min(10vw,7rem);
+  line-height:.88;
   text-transform:uppercase;
   letter-spacing:-.02em;
   margin-bottom:8px;
+  max-width:100%;
 }
 .closer .kicker{margin-bottom:clamp(24px,4vh,40px)}
 
@@ -662,13 +731,14 @@ section{position:relative;z-index:1}
 .sticky.show{transform:translate3d(0,0,0)}
 .sticky__txt{
   font-family:'Space Mono',monospace;
-  font-size:clamp(.6rem,1.6vw,.74rem);
-  letter-spacing:.2em;text-transform:uppercase;
+  font-size:clamp(.56rem,1.5vw,.74rem);
+  letter-spacing:.18em;text-transform:uppercase;
   line-height:1.5;
   color:var(--paper-dim);
+  min-width:0;
 }
 .sticky__txt b{display:block;color:var(--paper);font-weight:700}
-.sticky .btn{font-size:clamp(.85rem,2.4vw,1.05rem);padding:.6em 1.15em;flex:none}
+.sticky .btn{font-size:clamp(.8rem,2.2vw,1.05rem);padding:.6em 1.1em;flex:none}
 
 /* ---------- FOOTER ---------- */
 footer{
@@ -705,7 +775,6 @@ footer{
   max-width:46ch;
 }
 
-/* skip link */
 .skip{
   position:absolute;left:-9999px;top:0;z-index:9999;
   background:var(--blood);color:var(--paper);padding:10px 16px;
@@ -724,23 +793,28 @@ footer{
 
 @media (max-width:640px){
   .grid{grid-template-columns:1fr}
-  #grain{opacity:.18;animation-duration:900ms}
+  #grain{opacity:calc(.16 + var(--energy) * .07);animation-duration:900ms}
   #scan{opacity:.34;animation:none}
   #roll{opacity:.035;animation-duration:9s}
   #strobe{animation-duration:4.2s}
-  .plate__smoke{filter:contrast(2.4) brightness(.66);animation-duration:30s}
+  #beat{opacity:calc(var(--kick) * .05 + var(--hit) * .05)}
+  .plate__smoke{filter:contrast(2.4) brightness(calc(.64 + var(--kick) * .10));animation-duration:30s}
   .plate__light,.plate__figure{animation-duration:30s}
+  .plate__cam{transform:scale(calc(1 + var(--kick) * .008))}
   .sticky{backdrop-filter:none;background:#000}
   .hero__bot{flex-direction:column;align-items:stretch}
   .hero__bot .btn{justify-content:center}
-  .audio{min-width:0}
-  .press{align-self:stretch;justify-content:center}
+  .audio{width:100%}
+  .press{justify-content:center}
   .hero__top .kicker{text-align:left}
+  .shogun{font-size:min(18.5vw,7rem)}
+  .headliner{font-size:min(17vw,7rem)}
 }
 
 @media (max-width:400px){
-  .hero__meta{gap:6px;font-size:.6rem}
+  .hero__meta{gap:5px;font-size:.58rem}
   .strip__item{padding-inline:12px}
+  .wrap{width:calc(100% - 28px)}
 }
 
 /* ============================================================
@@ -748,13 +822,17 @@ footer{
    ============================================================ */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
-  #strobe,#roll{display:none}
+  #strobe,#roll,#beat,#tear{display:none}
   #grain{animation:none;opacity:.2}
   #scan{animation:none;opacity:.3}
-  .plate__smoke,.plate__light,.plate__figure{animation:none}
+  .plate__smoke,.plate__light,.plate__figure{animation:none;filter:contrast(2.6) brightness(.62)}
+  .plate__cam{transform:none}
+  .shogun{transform:none;text-shadow:0 0 60px rgba(0,0,0,.9)}
   .shogun.glitch,.shogun.glitch::before,.shogun.glitch::after{animation:none}
   .shogun::before,.shogun::after{display:none}
-  .btn,.press,.press::after{animation:none}
+  .btn,html.playing .btn,.press,.press::after{animation:none;box-shadow:none}
+  .press.is-playing{transform:none}
+  .wave.is-live span.on,.wave.is-live span.head{transform:none}
   .strip__track{animation:none}
   .stamp{opacity:1;transform:none}
   .stamp.slam,.flashline.slam{animation:none}
@@ -772,27 +850,29 @@ footer{
 <div class="fx" id="scan"></div>
 <div class="fx" id="roll"></div>
 <div class="fx" id="strobe"></div>
+<div class="fx" id="beat"></div>
+<div class="fx" id="tear"></div>
 
 <!-- ============================== HERO ============================== -->
 <header class="hero">
   <div class="plate" aria-hidden="true">
-    <div class="plate__smoke"></div>
-    <div class="plate__light"></div>
-    <svg class="plate__figure" viewBox="0 0 800 900" preserveAspectRatio="xMidYMax slice">
-      <defs>
-        <filter id="grit" x="-20%" y="-20%" width="140%" height="140%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.014 0.05" numOctaves="4" seed="23" result="t"/>
-          <feDisplacementMap in="SourceGraphic" in2="t" scale="30" xChannelSelector="R" yChannelSelector="G"/>
-          <feGaussianBlur stdDeviation="1.6"/>
-        </filter>
-      </defs>
-      <g filter="url(#grit)" fill="#000">
-        <!-- head -->
-        <path d="M400 158c72 0 108 54 108 122 0 70-42 128-108 128s-108-58-108-128c0-68 36-122 108-122z"/>
-        <!-- hood / shoulders / torso -->
-        <path d="M400 386c66 0 112 34 150 78 74 84 132 196 160 436H90c28-240 86-352 160-436 38-44 84-78 150-78z"/>
-      </g>
-    </svg>
+    <div class="plate__cam">
+      <div class="plate__smoke"></div>
+      <div class="plate__light"></div>
+      <svg class="plate__figure" viewBox="0 0 800 900" preserveAspectRatio="xMidYMax slice">
+        <defs>
+          <filter id="grit" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.014 0.05" numOctaves="4" seed="23" result="t"/>
+            <feDisplacementMap in="SourceGraphic" in2="t" scale="30" xChannelSelector="R" yChannelSelector="G"/>
+            <feGaussianBlur stdDeviation="1.6"/>
+          </filter>
+        </defs>
+        <g filter="url(#grit)" fill="#000">
+          <path d="M400 158c72 0 108 54 108 122 0 70-42 128-108 128s-108-58-108-128c0-68 36-122 108-122z"/>
+          <path d="M400 386c66 0 112 34 150 78 74 84 132 196 160 436H90c28-240 86-352 160-436 38-44 84-78 150-78z"/>
+        </g>
+      </svg>
+    </div>
     <div class="plate__grade"></div>
   </div>
 
@@ -807,7 +887,7 @@ footer{
 
   <div class="hero__mid wrap">
     <p class="presents">WA$TED &times; Trinity Present</p>
-    <h1 class="shogun" id="shogun" data-text="SHOGUN">SHOGUN</h1>
+    <h1 class="shogun fitline" id="shogun" data-fit="hero" data-text="SHOGUN">SHOGUN</h1>
     <p class="hero__meta">
       <span>Sat &middot; Sep 19 &middot; 2026</span>
       <span class="dot">/</span>
@@ -830,8 +910,8 @@ footer{
       </div>
       <div class="sc">
         <iframe id="scPlayer" title="SHOGUN — Can You Feel My Heart (Shogun Remix) on SoundCloud"
-          allow="autoplay" loading="lazy" scrolling="no" frameborder="no"
-          src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/shogunsworld/can-you-feel-my-heart-shogun-remix-free-dl&color=%2337efd1&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&show_artwork=false&visual=false&buying=false&sharing=false&download=false"></iframe>
+          width="100%" height="20" allow="autoplay" scrolling="no" frameborder="no"
+          src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/shogunsworld/can-you-feel-my-heart-shogun-remix-free-dl&color=%2337efd1&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&show_artwork=false&visual=false&buying=false&sharing=false&download=false"></iframe>
       </div>
       <a class="sc__credit" href="https://soundcloud.com/shogunsworld/can-you-feel-my-heart-shogun-remix-free-dl" target="_blank" rel="noopener">Listen on SoundCloud &rarr;</a>
     </div>
@@ -856,7 +936,7 @@ footer{
       <div class="flashline" style="top:-14px"></div>
       <p class="headliner stamp">
         <span class="tag">Headlining</span>
-        SHOGUN
+        <span class="fitline" data-fit="headliner">SHOGUN</span>
       </p>
     </div>
 
@@ -945,7 +1025,7 @@ footer{
 <section class="closer">
   <div class="wrap">
     <p class="kicker">Saturday &middot; September 19 &middot; 2026 &middot; The Circle OC</p>
-    <p class="big stamp">Don&rsquo;t Sleep</p>
+    <p class="big stamp"><span class="fitline" data-fit="closer">Don&rsquo;t Sleep</span></p>
     <p class="bio stamp" style="margin:0 auto 30px;text-align:center">
       Capacity is limited and all sales are final. Grab yours before the line does.
     </p>
@@ -992,35 +1072,90 @@ footer{
 <script>
 (function(){
   'use strict';
+
+  /* ---- tune these two if the sync drifts ---- */
+  var BPM        = 155;   // hard techno; matches the --beat CSS var
+  var OFFSET_MS  = 0;     // nudge + / - to line the kick up with the track
+
+  var BEAT_MS = 60000 / BPM;
+  var root    = document.documentElement;
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var narrow  = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
 
-  /* ---------------------------------------------------------
-     1. SHOGUN glitch — fires on load, then re-arms irregularly
-     --------------------------------------------------------- */
   var shogun = document.getElementById('shogun');
+  var tear   = document.getElementById('tear');
+  var wave   = document.getElementById('wave');
+  var iframe = document.getElementById('scPlayer');
+  var press  = document.getElementById('press');
+  var label  = document.getElementById('pressLabel');
+  var clock  = document.getElementById('clock');
+
+  /* =========================================================
+     1. SHOGUN glitch
+     ========================================================= */
   function glitch(){
-    if(!shogun) return;
+    if(!shogun || reduced) return;
     shogun.classList.remove('glitch');
-    void shogun.offsetWidth;            // force reflow to restart
+    void shogun.offsetWidth;
     shogun.classList.add('glitch');
     window.setTimeout(function(){ shogun.classList.remove('glitch'); }, 520);
   }
+  function trackingTear(){
+    if(!tear || reduced) return;
+    tear.classList.remove('go');
+    void tear.offsetWidth;
+    tear.classList.add('go');
+  }
   if(!reduced){
     window.setTimeout(glitch, 380);
+    // idle re-arm; while the track plays the beat clock drives this instead
     (function arm(){
-      var lo = narrow ? 8000 : 4000;
-      var hi = narrow ? 18000 : 11000;
+      var lo = narrow ? 9000 : 5000, hi = narrow ? 19000 : 12000;
       window.setTimeout(function(){
-        if(!document.hidden) glitch();
+        if(!document.hidden && !playing) glitch();
         arm();
       }, lo + Math.random() * (hi - lo));
     })();
   }
 
-  /* ---------------------------------------------------------
+  /* =========================================================
+     1b. Auto-fit the display type
+         Anton, Impact and the system fallback all have different
+         advance widths, so the headline is measured and sized to
+         its own container rather than trusting a vw formula.
+     ========================================================= */
+  var FIT = { hero:{max:224, ratio:.98}, headliner:{max:190, ratio:.96}, closer:{max:118, ratio:.94} };
+
+  function fitOne(el){
+    var cfg = FIT[el.getAttribute('data-fit')];
+    if(!cfg) return;
+    var box = el.parentElement;
+    var avail = box.clientWidth;
+    if(!avail) return;
+    var prev = el.style.fontSize;
+    el.style.fontSize = '100px';
+    var rng = document.createRange();
+    rng.selectNodeContents(el);
+    var w100 = rng.getBoundingClientRect().width;
+    if(!w100){ el.style.fontSize = prev; return; }
+    var size = Math.min(cfg.max, (avail * cfg.ratio / w100) * 100);
+    el.style.fontSize = Math.max(28, size).toFixed(2) + 'px';
+  }
+  function fitAll(){
+    Array.prototype.forEach.call(document.querySelectorAll('.fitline[data-fit]'), fitOne);
+  }
+  fitAll();
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
+  window.addEventListener('load', fitAll);
+  var fitT;
+  window.addEventListener('resize', function(){
+    clearTimeout(fitT); fitT = setTimeout(fitAll, 120);
+  }, { passive:true });
+  window.addEventListener('orientationchange', function(){ setTimeout(fitAll, 260); });
+
+  /* =========================================================
      2. Kinetic slam-in on scroll
-     --------------------------------------------------------- */
+     ========================================================= */
   var stamps = document.querySelectorAll('.stamp, .flashline');
   if(reduced || !('IntersectionObserver' in window)){
     Array.prototype.forEach.call(stamps, function(el){ el.classList.add('slam'); });
@@ -1029,17 +1164,17 @@ footer{
       entries.forEach(function(en){
         if(!en.isIntersecting) return;
         var el = en.target;
-        var sibs = el.parentNode ? Array.prototype.indexOf.call(el.parentNode.children, el) : 0;
-        window.setTimeout(function(){ el.classList.add('slam'); }, Math.min(sibs, 5) * 55);
+        var i = el.parentNode ? Array.prototype.indexOf.call(el.parentNode.children, el) : 0;
+        window.setTimeout(function(){ el.classList.add('slam'); }, Math.min(i,5) * 55);
         io.unobserve(el);
       });
     }, { threshold:.18, rootMargin:'0px 0px -8% 0px' });
     Array.prototype.forEach.call(stamps, function(el){ io.observe(el); });
   }
 
-  /* ---------------------------------------------------------
-     3. Sticky CTA — reveals once the hero is behind you
-     --------------------------------------------------------- */
+  /* =========================================================
+     3. Sticky CTA
+     ========================================================= */
   var sticky = document.getElementById('sticky');
   var hero   = document.querySelector('.hero');
   if(sticky && hero && 'IntersectionObserver' in window){
@@ -1050,111 +1185,208 @@ footer{
     sticky.classList.add('show');
   }
 
-  /* ---------------------------------------------------------
-     4. Pseudo-waveform bars
-     --------------------------------------------------------- */
-  var wave  = document.getElementById('wave');
-  var BARS  = narrow ? 40 : 64;
-  var bars  = [];
+  /* =========================================================
+     4. Waveform bars
+     ========================================================= */
+  var BARS = narrow ? 40 : 64, bars = [];
   if(wave){
     var frag = document.createDocumentFragment();
     for(var i = 0; i < BARS; i++){
-      var b = document.createElement('span');
-      // deterministic pseudo-random envelope so it reads like a real waveform
-      var t = i / BARS;
+      var b = document.createElement('span'), t = i / BARS;
       var h = 24
             + Math.abs(Math.sin(i * 1.37)) * 42
             + Math.abs(Math.sin(i * 0.41 + 1.1)) * 30
             + Math.sin(t * Math.PI) * 16;
       b.style.height = Math.max(10, Math.min(100, h)) + '%';
-      frag.appendChild(b);
-      bars.push(b);
+      frag.appendChild(b); bars.push(b);
     }
     wave.appendChild(frag);
   }
+  var lastEdge = -1;
   function paint(p){
     var edge = Math.round(p * BARS);
+    if(edge === lastEdge) return;
+    lastEdge = edge;
     for(var i = 0; i < bars.length; i++){
-      var on = i < edge;
-      if(on !== (bars[i].className === 'on')) bars[i].className = on ? 'on' : '';
+      var cls = i < edge ? (i === edge - 1 ? 'on head' : 'on') : '';
+      if(bars[i].className !== cls) bars[i].className = cls;
     }
   }
 
-  /* ---------------------------------------------------------
-     5. SoundCloud transport driven by the custom PRESS PLAY
-        Uses SoundCloud's own Widget API; falls back to the raw
-        postMessage protocol if api.js is unavailable.
-     --------------------------------------------------------- */
-  var iframe = document.getElementById('scPlayer');
-  var press  = document.getElementById('press');
-  var label  = document.getElementById('pressLabel');
-  var clock  = document.getElementById('clock');
-  var playing = false;
+  /* =========================================================
+     5. Pointer parallax + scroll-velocity shake
+     ========================================================= */
+  if(!reduced && window.matchMedia('(pointer:fine)').matches){
+    var pxT = 0, pyT = 0, pxC = 0, pyC = 0, parked = true;
+    window.addEventListener('mousemove', function(e){
+      pxT = (e.clientX / window.innerWidth  - .5) * 2;
+      pyT = (e.clientY / window.innerHeight - .5) * 2;
+      if(parked){ parked = false; requestAnimationFrame(easeParallax); }
+    }, { passive:true });
+    function easeParallax(){
+      pxC += (pxT - pxC) * .06;
+      pyC += (pyT - pyC) * .06;
+      root.style.setProperty('--px', pxC.toFixed(4));
+      root.style.setProperty('--py', pyC.toFixed(4));
+      if(Math.abs(pxT - pxC) > .002 || Math.abs(pyT - pyC) > .002){
+        requestAnimationFrame(easeParallax);
+      } else { parked = true; }
+    }
+  }
+
+  if(!reduced){
+    var lastY = window.scrollY, shake = 0, shakeRAF = 0;
+    window.addEventListener('scroll', function(){
+      var y = window.scrollY, v = Math.min(1, Math.abs(y - lastY) / 90);
+      lastY = y;
+      if(v > shake) shake = v;
+      if(!shakeRAF) shakeRAF = requestAnimationFrame(decayShake);
+    }, { passive:true });
+    function decayShake(){
+      shake *= .86;
+      root.style.setProperty('--shake', shake.toFixed(4));
+      shakeRAF = shake > .01 ? requestAnimationFrame(decayShake) : 0;
+      if(!shakeRAF) root.style.setProperty('--shake', 0);
+    }
+  }
+
+  /* =========================================================
+     6. SoundCloud transport + the beat clock
+        SoundCloud's iframe is cross-origin, so real frequency
+        analysis is off the table. Instead the motion runs on a
+        clock locked to the widget's reported playback position,
+        which lands on the kick at a fixed BPM.
+     ========================================================= */
+  var playing = false, userPaused = false, api = null;
+  var posMs = 0, posAt = 0, beatRAF = 0, lastBeatIndex = -1, energy = 0;
 
   function mmss(ms){
     var s = Math.max(0, Math.floor(ms / 1000));
     return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
   }
+
   function setPlaying(on){
     playing = on;
-    if(!press) return;
-    press.classList.toggle('is-playing', on);
-    press.setAttribute('aria-pressed', on ? 'true' : 'false');
-    if(label) label.textContent = on ? 'Playing' : 'Press Play';
+    root.classList.toggle('playing', on);
+    if(press){
+      press.classList.toggle('is-playing', on);
+      press.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    if(label) label.textContent = on ? 'Playing' : (userPaused ? 'Press Play' : 'Tap for Sound');
     if(wave) wave.classList.toggle('is-live', on);
+    if(on && !beatRAF && !reduced) beatRAF = requestAnimationFrame(beatLoop);
   }
 
-  var api = null;
+  function beatLoop(){
+    if(!playing){
+      beatRAF = 0;
+      energy = 0;
+      root.style.setProperty('--energy', 0);
+      root.style.setProperty('--kick', 0);
+      root.style.setProperty('--hit', 0);
+      return;
+    }
+    energy += (1 - energy) * .04;
+
+    // extrapolate between PLAY_PROGRESS events for a smooth phase
+    var now  = performance.now();
+    var pos  = posMs + (now - posAt) + OFFSET_MS;
+    var beat = pos / BEAT_MS;
+    var idx  = Math.floor(beat);
+    var ph   = beat - idx;
+
+    var kick = Math.pow(1 - ph, 3.4);
+    var hit  = (idx % 4 === 0) ? Math.pow(1 - ph, 4.5) : 0;
+
+    root.style.setProperty('--kick', kick.toFixed(4));
+    root.style.setProperty('--hit',  hit.toFixed(4));
+    root.style.setProperty('--energy', energy.toFixed(4));
+
+    if(idx !== lastBeatIndex){
+      lastBeatIndex = idx;
+      if(idx % 32 === 0) trackingTear();   // every 8 bars
+      else if(idx % 16 === 0) glitch();    // every 4 bars
+    }
+    beatRAF = requestAnimationFrame(beatLoop);
+  }
+
+  function onProgress(relative, current){
+    posMs = current || 0;
+    posAt = performance.now();
+    paint(relative || 0);
+    if(clock) clock.textContent = mmss(posMs);
+  }
 
   if(window.SC && SC.Widget && iframe){
-    /* --- official widget API --- */
     var w = SC.Widget(iframe);
     api = { play:function(){ w.play(); }, pause:function(){ w.pause(); } };
-    w.bind(SC.Widget.Events.PLAY,  function(){ setPlaying(true);  });
-    w.bind(SC.Widget.Events.PAUSE, function(){ setPlaying(false); });
-    w.bind(SC.Widget.Events.FINISH,function(){ setPlaying(false); paint(0); if(clock) clock.textContent = '0:00'; });
+    w.bind(SC.Widget.Events.READY, function(){
+      // autoplay attempt — browsers block sound before interaction,
+      // so the first click/scroll/keypress starts it instead
+      if(!userPaused) w.play();
+    });
+    w.bind(SC.Widget.Events.PLAY,   function(){ setPlaying(true);  });
+    w.bind(SC.Widget.Events.PAUSE,  function(){ setPlaying(false); });
+    w.bind(SC.Widget.Events.FINISH, function(){
+      setPlaying(false); lastEdge = -1; paint(0);
+      if(clock) clock.textContent = '0:00';
+    });
     w.bind(SC.Widget.Events.PLAY_PROGRESS, function(e){
-      paint(e.relativePosition || 0);
-      if(clock) clock.textContent = mmss(e.currentPosition || 0);
+      onProgress(e.relativePosition, e.currentPosition);
     });
   } else if(iframe){
-    /* --- raw postMessage fallback --- */
-    var send = function(method, value){
-      try{
-        iframe.contentWindow.postMessage(JSON.stringify({ method:method, value:value }), '*');
-      }catch(err){}
+    var send = function(m, v){
+      try{ iframe.contentWindow.postMessage(JSON.stringify({method:m, value:v}), '*'); }catch(err){}
     };
     api = { play:function(){ send('play'); }, pause:function(){ send('pause'); } };
     window.addEventListener('message', function(ev){
       if(typeof ev.data !== 'string' || ev.data.indexOf('{') !== 0) return;
-      var d;
-      try{ d = JSON.parse(ev.data); }catch(err){ return; }
+      var d; try{ d = JSON.parse(ev.data); }catch(err){ return; }
       if(d.method === 'ready'){
         ['play','pause','finish','playProgress'].forEach(function(n){ send('addEventListener', n); });
-      } else if(d.method === 'play'){
-        setPlaying(true);
-      } else if(d.method === 'pause'){
-        setPlaying(false);
-      } else if(d.method === 'finish'){
-        setPlaying(false); paint(0);
-      } else if(d.method === 'playProgress' && d.value){
-        paint(d.value.relativePosition || 0);
-        if(clock) clock.textContent = mmss(d.value.currentPosition || 0);
+        if(!userPaused) send('play');
+      }
+      else if(d.method === 'play')   setPlaying(true);
+      else if(d.method === 'pause')  setPlaying(false);
+      else if(d.method === 'finish'){ setPlaying(false); lastEdge = -1; paint(0); }
+      else if(d.method === 'playProgress' && d.value){
+        onProgress(d.value.relativePosition, d.value.currentPosition);
       }
     });
     send('addEventListener', 'ready');
   }
 
+  /* first interaction unlocks audio if the browser blocked autoplay */
+  var unlocked = false;
+  function unlock(){
+    if(unlocked || playing || userPaused || !api) return;
+    unlocked = true;
+    api.play();
+  }
+  ['pointerdown','keydown','touchstart','wheel','scroll'].forEach(function(evt){
+    window.addEventListener(evt, unlock, { once:true, passive:true });
+  });
+
+  /* the viewer stays in control */
   if(press){
     press.addEventListener('click', function(){
       if(!api){
-        // last resort: hand the listener straight to SoundCloud
         window.open('https://soundcloud.com/shogunsworld/can-you-feel-my-heart-shogun-remix-free-dl','_blank','noopener');
         return;
       }
-      playing ? api.pause() : api.play();
+      if(playing){ userPaused = true;  api.pause(); }
+      else       { userPaused = false; api.play();  }
     });
   }
+
+  /* don't burn frames in a background tab */
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){
+      if(beatRAF){ cancelAnimationFrame(beatRAF); beatRAF = 0; }
+    } else if(playing && !beatRAF && !reduced){
+      beatRAF = requestAnimationFrame(beatLoop);
+    }
+  });
 })();
 </script>
 </body>
