@@ -10,6 +10,8 @@ dependencies are Google Fonts and SoundCloud's official embed.
 
 ## What's in it
 
+- Official WA$TED mark embedded as a traced inline SVG (~6.7KB) in the header and footer —
+  vector, so it stays crisp at any size, and recolourable via `currentColor`
 - Fully procedural hero — SVG turbulence + silhouette, no raster assets
 - Animated film grain, drifting scanlines, CRT roll and a low-amplitude flicker
 - Glitching `SHOGUN` headline with RGB channel split and slice displacement
@@ -34,6 +36,16 @@ var OFFSET_MS = 0;    // nudge +/- to line the kick up with the audio
 Driven by the clock: hero push and brightness, the beat flash overlay, CTA glow,
 the PRESS PLAY ring, waveform bars, the hazard-strip tint, a glitch every 4 bars
 and a VHS tracking tear every 8.
+
+## The logo
+
+The mark is defined once as an SVG `<symbol id="wastedMark">` at the top of `<body>` and
+referenced with `<use>` wherever it appears, so it costs its ~6.7KB once. It's filled with
+`currentColor`, so the whole mark recolours from one line:
+
+```css
+.logo{ color:var(--gold); }   /* official khaki — change to var(--paper) for white knockout */
+```
 
 ## Accessibility
 
