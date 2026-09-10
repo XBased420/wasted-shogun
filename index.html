@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WA$TED x TRINITY: SHOGUN — The Circle OC — Sat Sep 19, 2026</title>
+<meta name="description" content="SHOGUN live at The Circle OC, Huntington Beach. Saturday September 19, 2026. Hard techno, gabber, industrial. With Aneezy and Ashlie Crystal. 18+. Presented by WA$TED x TRINITY.">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:title" content="WA$TED x TRINITY: SHOGUN — The Circle OC">
+<meta property="og:description" content="Sat Sep 19, 2026 · 9PM–2AM · The Circle OC, Huntington Beach · 18+ · SHOGUN with Aneezy + Ashlie Crystal">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   WA$TED x TRINITY : SHOGUN
+   Single-file event landing page. Inline CSS/JS only.
+   External deps: Google Fonts + SoundCloud embed.
+   ============================================================ */
+
+:root{
+  --ink:#000000;
+  --paper:#EDEDE8;
+  --paper-dim:#8B8B86;
+  --blood:#C8102E;
+  --blood-hot:#FF1E3C;
+  --hair:rgba(237,237,232,.16);
+  --beat:387ms;              /* ~155 BPM */
+  --bar:3.096s;              /* 8 beats  */
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+
+body{
+  background:var(--ink);
+  color:var(--paper);
+  font-family:'Barlow Condensed',Impact,'Arial Narrow',sans-serif;
+  font-size:17px;
+  line-height:1.45;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+img,svg{max-width:100%;display:block}
+a{color:inherit}
+
+::selection{background:var(--blood);color:var(--paper)}
+
+.wrap{width:min(1180px,100% - 40px);margin-inline:auto}
+
+/* ---------- shared type ---------- */
+.kicker{
+  font-family:'Space Mono',ui-monospace,monospace;
+  font-size:clamp(.62rem,1.5vw,.78rem);
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  color:var(--paper-dim);
+}
+.slam-head{
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(2.4rem,8vw,5.4rem);
+  line-height:.86;
+  letter-spacing:-.015em;
+  text-transform:uppercase;
+}
+.rule{height:1px;background:var(--hair);border:0}
+
+/* ============================================================
+   FIXED TEXTURE OVERLAYS (grain / scanlines / strobe)
+   All three are compositor-only: opacity + background-position.
+   ============================================================ */
+.fx{position:fixed;inset:0;pointer-events:none;z-index:9000}
+
+#grain{
+  z-index:9001;
+  opacity:.30;
+  mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:260px 260px;
+  animation:grainshift 640ms steps(1,end) infinite;
+  will-change:background-position;
+}
+@keyframes grainshift{
+  0%  {background-position:0 0}
+  12% {background-position:-42px 31px}
+  25% {background-position:19px -58px}
+  37% {background-position:-73px -12px}
+  50% {background-position:55px 44px}
+  62% {background-position:-24px 67px}
+  75% {background-position:71px -35px}
+  87% {background-position:-61px 8px}
+  100%{background-position:0 0}
+}
+
+#scan{
+  z-index:9002;
+  opacity:.5;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0px,
+    rgba(0,0,0,0) 2px,
+    rgba(0,0,0,.42) 3px,
+    rgba(0,0,0,.42) 4px
+  );
+  animation:scandrift 11s linear infinite;
+  will-change:transform;
+}
+@keyframes scandrift{
+  from{transform:translate3d(0,0,0)}
+  to  {transform:translate3d(0,4px,0)}
+}
+/* slow bright band sweeping down — CRT roll */
+#roll{
+  z-index:9003;
+  opacity:.055;
+  background:linear-gradient(to bottom,transparent 0%,var(--paper) 46%,var(--paper) 54%,transparent 100%);
+  height:36vh;inset:auto 0 auto 0;
+  animation:rollsweep 7.4s linear infinite;
+  will-change:transform;
+}
+@keyframes rollsweep{
+  from{transform:translate3d(0,-40vh,0)}
+  to  {transform:translate3d(0,140vh,0)}
+}
+
+/* Flickering-fluorescent, NOT a hard strobe.
+   Irregular, low amplitude, capped well under 3Hz. */
+#strobe{
+  z-index:9004;
+  background:var(--paper);
+  opacity:0;
+  animation:flicker var(--bar) steps(1,end) infinite;
+  will-change:opacity;
+}
+@keyframes flicker{
+  0%,100%{opacity:0}
+  2%  {opacity:.055}
+  4%   {opacity:0}
+  25%  {opacity:.030}
+  26.5%{opacity:0}
+  49%  {opacity:.048}
+  50.5%{opacity:0}
+  51.5%{opacity:.022}
+  53%  {opacity:0}
+  74%  {opacity:.038}
+  75.5%{opacity:0}
+  93%  {opacity:.018}
+  94%  {opacity:0}
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  position:relative;
+  min-height:100svh;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  overflow:hidden;
+  isolation:isolate;
+  padding-block:28px 34px;
+}
+
+/* --- procedural photography stack (no raster assets) --- */
+.plate{position:absolute;inset:0;z-index:-3;overflow:hidden;background:#000}
+
+/* smoke / film-emulsion field, crushed to high-contrast B&W */
+.plate__smoke{
+  position:absolute;inset:-14%;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.009' numOctaves='5' seed='19'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='900' height='900' filter='url(%23s)'/%3E%3C/svg%3E");
+  background-size:cover;
+  filter:contrast(2.9) brightness(.62);
+  opacity:.9;
+  animation:kenburns 24s ease-in-out infinite alternate;
+  will-change:transform;
+}
+@keyframes kenburns{
+  from{transform:scale(1.02) translate3d(-1.2%,1%,0)}
+  to  {transform:scale(1.16) translate3d(1.6%,-2.2%,0)}
+}
+
+/* backlight behind the figure — gives the silhouette its rim */
+.plate__light{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 54% 46% at 50% 40%,
+      rgba(237,237,232,.60) 0%,
+      rgba(237,237,232,.16) 42%,
+      rgba(237,237,232,0) 72%);
+  animation:kenburns 24s ease-in-out infinite alternate;
+  will-change:transform;
+}
+
+/* the subject */
+.plate__figure{
+  position:absolute;
+  left:50%;bottom:0;
+  width:min(112vh,140%);
+  height:92%;
+  transform:translateX(-50%);
+  animation:figuredrift 24s ease-in-out infinite alternate;
+  will-change:transform;
+}
+@keyframes figuredrift{
+  from{transform:translateX(-50%) scale(1.01) translateY(1%)}
+  to  {transform:translateX(-50%) scale(1.07) translateY(-1.5%)}
+}
+
+/* duotone wash + hard vignette */
+.plate__grade{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 78% 68% at 50% 44%, transparent 30%, rgba(0,0,0,.86) 82%, #000 100%),
+    linear-gradient(to bottom, rgba(0,0,0,.62) 0%, transparent 26%, transparent 58%, #000 96%),
+    linear-gradient(115deg, rgba(0,0,0,.55) 0%, transparent 34%),
+    linear-gradient(200deg, rgba(200,16,46,.16) 0%, transparent 46%);
+}
+
+/* --- hero content --- */
+.hero__top,.hero__mid,.hero__bot{position:relative;z-index:2}
+.hero__top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+
+.wordmark{
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(1rem,2.7vw,1.5rem);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  line-height:1;
+}
+.wordmark em{font-style:normal;color:var(--blood)}
+.hero__top .kicker{text-align:right;line-height:1.9}
+
+.hero__mid{margin-block:clamp(18px,4vh,44px);text-align:center}
+
+.presents{
+  font-family:'Space Mono',monospace;
+  font-size:clamp(.6rem,1.6vw,.8rem);
+  letter-spacing:.42em;
+  text-transform:uppercase;
+  color:#C4C4BF;
+  text-shadow:0 2px 14px rgba(0,0,0,.95);
+  margin-bottom:clamp(6px,1.4vh,14px);
+}
+
+/* --- the glitching headline --- */
+.shogun{
+  position:relative;
+  display:inline-block;
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(4rem,19.8vw,16rem);
+  line-height:.8;
+  letter-spacing:-.028em;
+  text-transform:uppercase;
+  color:var(--paper);
+  text-shadow:0 0 60px rgba(0,0,0,.9);
+}
+.shogun::before,.shogun::after{
+  content:attr(data-text);
+  position:absolute;
+  inset:0;
+  color:var(--paper);
+  background:var(--ink);
+  overflow:hidden;
+  opacity:0;
+  pointer-events:none;
+}
+.shogun.glitch::before{
+  opacity:1;
+  left:3px;
+  text-shadow:-3px 0 var(--blood-hot);
+  animation:sliceA 480ms steps(2,end) 1 both;
+}
+.shogun.glitch::after{
+  opacity:1;
+  left:-3px;
+  text-shadow:3px 0 #00E5D0;
+  animation:sliceB 480ms steps(2,end) 1 both;
+}
+.shogun.glitch{animation:jolt 480ms steps(2,end) 1 both}
+
+@keyframes jolt{
+  0%,100%{transform:translate3d(0,0,0)}
+  18%{transform:translate3d(-4px,2px,0)}
+  36%{transform:translate3d(5px,-2px,0)}
+  54%{transform:translate3d(-2px,-1px,0)}
+  72%{transform:translate3d(3px,1px,0)}
+}
+@keyframes sliceA{
+  0%  {clip-path:inset(8% 0 82% 0);  transform:translate3d(-9px,0,0)}
+  20% {clip-path:inset(42% 0 40% 0); transform:translate3d(12px,0,0)}
+  40% {clip-path:inset(70% 0 14% 0); transform:translate3d(-16px,0,0)}
+  60% {clip-path:inset(20% 0 66% 0); transform:translate3d(7px,0,0)}
+  80% {clip-path:inset(56% 0 26% 0); transform:translate3d(-11px,0,0)}
+  100%{clip-path:inset(0 0 100% 0);  transform:translate3d(0,0,0)}
+}
+@keyframes sliceB{
+  0%  {clip-path:inset(62% 0 26% 0); transform:translate3d(10px,0,0)}
+  20% {clip-path:inset(14% 0 74% 0); transform:translate3d(-13px,0,0)}
+  40% {clip-path:inset(34% 0 52% 0); transform:translate3d(15px,0,0)}
+  60% {clip-path:inset(78% 0 8% 0);  transform:translate3d(-6px,0,0)}
+  80% {clip-path:inset(26% 0 60% 0); transform:translate3d(9px,0,0)}
+  100%{clip-path:inset(100% 0 0 0);  transform:translate3d(0,0,0)}
+}
+
+.hero__meta{
+  margin-top:clamp(12px,2.4vh,22px);
+  display:flex;justify-content:center;align-items:center;
+  gap:clamp(10px,2.4vw,22px);
+  flex-wrap:wrap;
+  font-family:'Space Mono',monospace;
+  font-size:clamp(.66rem,1.7vw,.9rem);
+  letter-spacing:.2em;
+  text-transform:uppercase;
+}
+.hero__meta .dot{color:var(--blood)}
+
+.hero__bot{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:clamp(16px,4vw,40px);
+  flex-wrap:wrap;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn{
+  --glow:rgba(200,16,46,.55);
+  position:relative;
+  display:inline-flex;align-items:center;gap:12px;
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(1rem,2.4vw,1.35rem);
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  text-decoration:none;
+  padding:.72em 1.5em;
+  background:var(--blood);
+  color:var(--paper);
+  border:1px solid var(--blood);
+  cursor:pointer;
+  animation:ctabreathe 2.4s ease-in-out infinite;
+  transition:background .12s steps(2),color .12s steps(2),transform .08s steps(2);
+  will-change:box-shadow;
+}
+@keyframes ctabreathe{
+  0%,100%{box-shadow:0 0 0 0 var(--glow),0 0 22px -6px var(--glow)}
+  50%    {box-shadow:0 0 0 6px rgba(200,16,46,0),0 0 46px -2px var(--glow)}
+}
+.btn:hover,.btn:focus-visible{background:var(--paper);color:var(--ink);border-color:var(--paper);transform:translate3d(0,-2px,0)}
+.btn:active{transform:translate3d(0,1px,0)}
+.btn .arrow{font-family:'Space Mono',monospace;font-size:.8em}
+
+.btn--ghost{
+  background:transparent;
+  color:var(--paper);
+  border:1px solid var(--hair);
+  animation:none;
+}
+.btn--ghost:hover,.btn--ghost:focus-visible{background:var(--paper);color:var(--ink)}
+
+/* ============================================================
+   PRESS PLAY / audio module
+   ============================================================ */
+.audio{
+  display:flex;flex-direction:column;gap:10px;
+  min-width:min(320px,100%);
+  text-align:left;
+}
+
+.press{
+  position:relative;
+  display:inline-flex;align-items:center;gap:14px;
+  align-self:flex-start;
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(.95rem,2.2vw,1.2rem);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  padding:.7em 1.3em .7em 1.1em;
+  background:transparent;
+  color:var(--paper);
+  border:1px solid var(--paper);
+  cursor:pointer;
+  overflow:hidden;
+  animation:kick calc(var(--beat) * 2) steps(1,end) infinite;
+}
+/* two-beat kick pattern: BOOM . boom . */
+@keyframes kick{
+  0%   {box-shadow:inset 0 0 0 0 rgba(237,237,232,.9),0 0 0 0 rgba(237,237,232,.5);transform:scale(1.018)}
+  6%   {box-shadow:inset 0 0 0 0 rgba(237,237,232,0),0 0 0 10px rgba(237,237,232,0);transform:scale(1)}
+  50%  {box-shadow:inset 0 0 0 0 rgba(237,237,232,.45),0 0 0 0 rgba(237,237,232,.28);transform:scale(1.009)}
+  56%  {box-shadow:inset 0 0 0 0 rgba(237,237,232,0),0 0 0 8px rgba(237,237,232,0);transform:scale(1)}
+  100% {box-shadow:inset 0 0 0 0 rgba(237,237,232,0);transform:scale(1)}
+}
+.press:hover,.press:focus-visible{background:var(--paper);color:var(--ink)}
+.press.is-playing{
+  border-color:var(--blood);
+  color:var(--blood-hot);
+  animation:none;
+}
+.press.is-playing:hover{background:var(--blood);color:var(--paper)}
+/* strobe wipe behind the label */
+.press::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(237,237,232,.22),transparent);
+  transform:translateX(-120%);
+  animation:wipe 3.6s steps(24,end) infinite;
+  pointer-events:none;
+}
+@keyframes wipe{0%,70%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+.press.is-playing::after{animation:none;opacity:0}
+
+.press__icon{
+  width:0;height:0;
+  border-style:solid;
+  border-width:8px 0 8px 13px;
+  border-color:transparent transparent transparent currentColor;
+  flex:none;
+}
+.press.is-playing .press__icon{
+  width:12px;height:16px;
+  border-width:0;
+  border-left:4px solid currentColor;
+  border-right:4px solid currentColor;
+  background:transparent;
+}
+
+/* pseudo-waveform: bars fill red with playback */
+.wave{
+  display:flex;align-items:flex-end;gap:2px;
+  height:34px;
+  opacity:.42;
+  transition:opacity .3s;
+}
+.wave.is-live{opacity:1}
+.wave span{
+  flex:1 1 auto;
+  min-width:2px;
+  background:var(--hair);
+  transform-origin:bottom;
+  transition:background .18s linear;
+}
+.wave span.on{background:var(--blood)}
+.wave.is-live span.on:nth-child(3n){background:var(--blood-hot)}
+
+.audio__label{
+  display:flex;justify-content:space-between;gap:12px;
+  font-family:'Space Mono',monospace;
+  font-size:.66rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--paper-dim);
+}
+.audio__label b{color:var(--paper);font-weight:400}
+
+/* the real SoundCloud player, reduced to a hairline strip */
+.sc{
+  position:relative;
+  height:20px;
+  overflow:hidden;
+  border-top:1px solid rgba(200,16,46,.45);
+  opacity:.5;
+  transition:opacity .25s;
+  filter:invert(1) contrast(1.05) saturate(1.15);
+}
+.sc:hover{opacity:.95}
+.sc iframe{width:100%;height:120px;border:0;margin-top:-46px;display:block}
+.sc__credit{
+  font-family:'Space Mono',monospace;
+  font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--paper-dim);text-decoration:none;
+}
+.sc__credit:hover{color:var(--blood-hot)}
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+section{position:relative;z-index:1}
+.sec{padding-block:clamp(64px,11vh,130px)}
+.sec__head{display:flex;align-items:flex-start;gap:18px;margin-bottom:clamp(26px,5vh,52px);flex-wrap:wrap}
+.sec__head .num{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:.3em;color:var(--blood);padding-top:.7em;flex:none}
+
+/* kinetic slam-in */
+.stamp{
+  opacity:0;
+  transform:translate3d(0,26px,0) scaleY(1.42);
+  transform-origin:bottom;
+}
+.stamp.slam{
+  animation:slam 300ms cubic-bezier(.9,0,.1,1) both;
+}
+@keyframes slam{
+  0%  {opacity:0;transform:translate3d(0,26px,0) scaleY(1.42)}
+  55% {opacity:1;transform:translate3d(0,-4px,0) scaleY(.92)}
+  72% {opacity:1;transform:translate3d(0,1px,0) scaleY(1.03)}
+  100%{opacity:1;transform:translate3d(0,0,0) scaleY(1)}
+}
+/* red impact flash on the slam */
+.stamp.slam::selection{background:var(--blood)}
+.flashline{
+  position:absolute;left:0;right:0;height:2px;background:var(--blood);
+  transform:scaleX(0);transform-origin:left;
+}
+.flashline.slam{animation:flashwipe 340ms cubic-bezier(.9,0,.1,1) both}
+@keyframes flashwipe{
+  0%{transform:scaleX(0);opacity:1}
+  60%{transform:scaleX(1);opacity:1}
+  100%{transform:scaleX(1);opacity:.28}
+}
+
+/* ---------- LINEUP ---------- */
+.lineup{border-top:1px solid var(--hair)}
+.headliner{
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(3.4rem,15vw,11rem);
+  line-height:.82;
+  letter-spacing:-.03em;
+  text-transform:uppercase;
+}
+.headliner .tag{
+  display:block;
+  font-family:'Space Mono',monospace;
+  font-size:clamp(.6rem,1.5vw,.78rem);
+  letter-spacing:.36em;
+  color:var(--blood);
+  margin-bottom:10px;
+  line-height:1;
+}
+.bio{
+  max-width:62ch;
+  margin-top:22px;
+  font-size:clamp(1rem,2vw,1.22rem);
+  font-weight:500;
+  color:#C9C9C4;
+}
+.bio q{color:var(--paper);font-style:italic;quotes:'"' '"'}
+.support{
+  margin-top:clamp(38px,7vh,72px);
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:1px;
+  background:var(--hair);
+  border:1px solid var(--hair);
+}
+.support__act{
+  background:var(--ink);
+  padding:clamp(22px,4vw,34px);
+  display:flex;flex-direction:column;gap:8px;
+  transition:background .18s steps(2);
+}
+.support__act:hover{background:#0C0C0C}
+.support__act .name{
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(1.7rem,5vw,2.9rem);
+  line-height:.9;
+  text-transform:uppercase;
+  letter-spacing:-.01em;
+}
+
+/* ---------- DETAILS ---------- */
+.details{border-top:1px solid var(--hair)}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1px;
+  background:var(--hair);
+  border:1px solid var(--hair);
+}
+.cell{background:var(--ink);padding:clamp(22px,3.4vw,34px);display:flex;flex-direction:column;gap:10px}
+.cell dt{
+  font-family:'Space Mono',monospace;
+  font-size:.66rem;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--blood);
+}
+.cell dd{
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(1.15rem,2.6vw,1.6rem);
+  letter-spacing:.01em;
+  text-transform:uppercase;
+  line-height:1.06;
+}
+.cell .sub{
+  font-family:'Space Mono',monospace;
+  font-size:.74rem;letter-spacing:.08em;
+  color:var(--paper-dim);
+  text-transform:none;
+}
+.linkline{
+  font-family:'Space Mono',monospace;
+  font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--paper);
+  text-decoration:none;
+  border-bottom:1px solid var(--blood);
+  padding-bottom:2px;
+  align-self:flex-start;
+  transition:color .15s steps(2),background .15s steps(2);
+}
+.linkline:hover,.linkline:focus-visible{background:var(--blood);color:var(--paper);border-color:var(--blood)}
+
+/* ---------- HAZARD STRIP ---------- */
+.strip{
+  border-block:1px solid var(--blood);
+  background:
+    repeating-linear-gradient(135deg,
+      rgba(200,16,46,.16) 0 14px,
+      transparent 14px 28px);
+  overflow:hidden;
+  padding-block:16px;
+  white-space:nowrap;
+}
+.strip__track{display:inline-flex;animation:marquee 34s linear infinite;will-change:transform}
+.strip__set{display:inline-flex;align-items:center;flex:none}
+.strip__item{
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(.95rem,2.4vw,1.35rem);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  padding-inline:clamp(16px,3vw,30px);
+  color:var(--paper);
+  text-decoration:none;
+}
+.strip__item a,.strip__item.link{color:var(--blood-hot);text-decoration:none}
+.strip__item.link:hover{color:var(--paper);background:var(--blood)}
+.strip__sep{color:var(--blood);font-size:1.1rem}
+@keyframes marquee{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+
+/* ---------- CLOSER ---------- */
+.closer{
+  text-align:center;
+  padding-block:clamp(72px,14vh,150px);
+  border-top:1px solid var(--hair);
+}
+.closer .big{
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(2.6rem,10vw,7rem);
+  line-height:.86;
+  text-transform:uppercase;
+  letter-spacing:-.02em;
+  margin-bottom:8px;
+}
+.closer .kicker{margin-bottom:clamp(24px,4vh,40px)}
+
+/* ---------- STICKY CTA ---------- */
+.sticky{
+  position:fixed;
+  left:0;right:0;bottom:0;
+  z-index:8000;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:14px;
+  padding:12px clamp(14px,4vw,28px);
+  background:rgba(0,0,0,.92);
+  border-top:1px solid var(--blood);
+  backdrop-filter:blur(8px);
+  transform:translate3d(0,110%,0);
+  transition:transform .34s cubic-bezier(.9,0,.1,1);
+}
+.sticky.show{transform:translate3d(0,0,0)}
+.sticky__txt{
+  font-family:'Space Mono',monospace;
+  font-size:clamp(.6rem,1.6vw,.74rem);
+  letter-spacing:.2em;text-transform:uppercase;
+  line-height:1.5;
+  color:var(--paper-dim);
+}
+.sticky__txt b{display:block;color:var(--paper);font-weight:700}
+.sticky .btn{font-size:clamp(.85rem,2.4vw,1.05rem);padding:.6em 1.15em;flex:none}
+
+/* ---------- FOOTER ---------- */
+footer{
+  border-top:1px solid var(--hair);
+  padding-block:clamp(40px,7vh,72px) clamp(90px,12vh,110px);
+}
+.foot{
+  display:flex;justify-content:space-between;gap:clamp(20px,5vw,56px);
+  flex-wrap:wrap;
+}
+.foot__brand{
+  font-family:'Anton',Impact,sans-serif;
+  font-size:clamp(1.4rem,4vw,2.2rem);
+  text-transform:uppercase;
+  letter-spacing:.02em;
+  line-height:1.05;
+}
+.foot__brand em{font-style:normal;color:var(--blood)}
+.socials{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.socials a{
+  font-family:'Space Mono',monospace;
+  font-size:.72rem;letter-spacing:.14em;
+  text-decoration:none;
+  border:1px solid var(--hair);
+  padding:8px 12px;
+  transition:background .15s steps(2),color .15s steps(2),border-color .15s steps(2);
+}
+.socials a:hover,.socials a:focus-visible{background:var(--blood);border-color:var(--blood);color:var(--paper)}
+.fineprint{
+  font-family:'Space Mono',monospace;
+  font-size:.68rem;
+  line-height:1.9;
+  color:#5E5E5A;
+  max-width:46ch;
+}
+
+/* skip link */
+.skip{
+  position:absolute;left:-9999px;top:0;z-index:9999;
+  background:var(--blood);color:var(--paper);padding:10px 16px;
+  font-family:'Space Mono',monospace;font-size:.75rem;
+}
+.skip:focus{left:8px;top:8px}
+
+:focus-visible{outline:2px solid var(--blood-hot);outline-offset:3px}
+
+/* ============================================================
+   MOBILE — lighter motion, same energy
+   ============================================================ */
+@media (max-width:980px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+}
+
+@media (max-width:640px){
+  .grid{grid-template-columns:1fr}
+  #grain{opacity:.18;animation-duration:900ms}
+  #scan{opacity:.34;animation:none}
+  #roll{opacity:.035;animation-duration:9s}
+  #strobe{animation-duration:4.2s}
+  .plate__smoke{filter:contrast(2.4) brightness(.66);animation-duration:30s}
+  .plate__light,.plate__figure{animation-duration:30s}
+  .sticky{backdrop-filter:none;background:#000}
+  .hero__bot{flex-direction:column;align-items:stretch}
+  .hero__bot .btn{justify-content:center}
+  .audio{min-width:0}
+  .press{align-self:stretch;justify-content:center}
+  .hero__top .kicker{text-align:left}
+}
+
+@media (max-width:400px){
+  .hero__meta{gap:6px;font-size:.6rem}
+  .strip__item{padding-inline:12px}
+}
+
+/* ============================================================
+   REDUCED MOTION — page goes still, design stays intact
+   ============================================================ */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  #strobe,#roll{display:none}
+  #grain{animation:none;opacity:.2}
+  #scan{animation:none;opacity:.3}
+  .plate__smoke,.plate__light,.plate__figure{animation:none}
+  .shogun.glitch,.shogun.glitch::before,.shogun.glitch::after{animation:none}
+  .shogun::before,.shogun::after{display:none}
+  .btn,.press,.press::after{animation:none}
+  .strip__track{animation:none}
+  .stamp{opacity:1;transform:none}
+  .stamp.slam,.flashline.slam{animation:none}
+  .flashline{transform:scaleX(1);opacity:.28}
+  .sticky{transition:none}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#tickets">Skip to tickets</a>
+
+<!-- fixed texture overlays -->
+<div class="fx" id="grain"></div>
+<div class="fx" id="scan"></div>
+<div class="fx" id="roll"></div>
+<div class="fx" id="strobe"></div>
+
+<!-- ============================== HERO ============================== -->
+<header class="hero">
+  <div class="plate" aria-hidden="true">
+    <div class="plate__smoke"></div>
+    <div class="plate__light"></div>
+    <svg class="plate__figure" viewBox="0 0 800 900" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <filter id="grit" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.014 0.05" numOctaves="4" seed="23" result="t"/>
+          <feDisplacementMap in="SourceGraphic" in2="t" scale="30" xChannelSelector="R" yChannelSelector="G"/>
+          <feGaussianBlur stdDeviation="1.6"/>
+        </filter>
+      </defs>
+      <g filter="url(#grit)" fill="#000">
+        <!-- head -->
+        <path d="M400 158c72 0 108 54 108 122 0 70-42 128-108 128s-108-58-108-128c0-68 36-122 108-122z"/>
+        <!-- hood / shoulders / torso -->
+        <path d="M400 386c66 0 112 34 150 78 74 84 132 196 160 436H90c28-240 86-352 160-436 38-44 84-78 150-78z"/>
+      </g>
+    </svg>
+    <div class="plate__grade"></div>
+  </div>
+
+  <div class="hero__top wrap">
+    <div class="wordmark">WA<em>$</em>TED <em>&times;</em> TRINITY</div>
+    <div class="kicker">
+      The Circle OC<br>
+      Huntington Beach, CA<br>
+      18+ &middot; Doors 8:30 PM
+    </div>
+  </div>
+
+  <div class="hero__mid wrap">
+    <p class="presents">WA$TED &times; Trinity Present</p>
+    <h1 class="shogun" id="shogun" data-text="SHOGUN">SHOGUN</h1>
+    <p class="hero__meta">
+      <span>Sat &middot; Sep 19 &middot; 2026</span>
+      <span class="dot">/</span>
+      <span>9:00 PM &ndash; 2:00 AM</span>
+      <span class="dot">/</span>
+      <span>The Circle OC</span>
+    </p>
+  </div>
+
+  <div class="hero__bot wrap">
+    <div class="audio">
+      <button class="press" id="press" type="button" aria-pressed="false">
+        <span class="press__icon" aria-hidden="true"></span>
+        <span id="pressLabel">Press Play</span>
+      </button>
+      <div class="wave" id="wave" aria-hidden="true"></div>
+      <div class="audio__label">
+        <span><b>Can You Feel My Heart</b> &mdash; Shogun Remix</span>
+        <span id="clock">0:00</span>
+      </div>
+      <div class="sc">
+        <iframe id="scPlayer" title="SHOGUN — Can You Feel My Heart (Shogun Remix) on SoundCloud"
+          allow="autoplay" loading="lazy" scrolling="no" frameborder="no"
+          src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/shogunsworld/can-you-feel-my-heart-shogun-remix-free-dl&color=%2337efd1&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&show_artwork=false&visual=false&buying=false&sharing=false&download=false"></iframe>
+      </div>
+      <a class="sc__credit" href="https://soundcloud.com/shogunsworld/can-you-feel-my-heart-shogun-remix-free-dl" target="_blank" rel="noopener">Listen on SoundCloud &rarr;</a>
+    </div>
+
+    <a class="btn" id="tickets" href="https://www.eventbrite.com/e/wated-x-trinity-shogun-the-circle-oc-18-tickets-1993673585362" target="_blank" rel="noopener">
+      Get Tickets <span class="arrow">&#9656;</span>
+    </a>
+  </div>
+</header>
+
+<main>
+
+<!-- ============================== LINEUP ============================== -->
+<section class="sec lineup" id="lineup">
+  <div class="wrap">
+    <div class="sec__head">
+      <span class="num">01</span>
+      <h2 class="slam-head stamp">Lineup</h2>
+    </div>
+
+    <div style="position:relative">
+      <div class="flashline" style="top:-14px"></div>
+      <p class="headliner stamp">
+        <span class="tag">Headlining</span>
+        SHOGUN
+      </p>
+    </div>
+
+    <p class="bio stamp">
+      LA-based hardcore, gabber and hard techno artist. Launched the project in 2023 and has
+      since been called <q>one of hard techno&rsquo;s fastest-rising names</q> &mdash; fusing hardcore,
+      gabber, industrial and hard techno into <q>crushing kicks, distorted textures and relentless energy</q>.
+    </p>
+
+    <div class="support">
+      <div class="support__act stamp">
+        <span class="kicker">Support</span>
+        <span class="name">Aneezy</span>
+      </div>
+      <div class="support__act stamp">
+        <span class="kicker">Support</span>
+        <span class="name">Ashlie Crystal</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== DETAILS ============================== -->
+<section class="sec details" id="details">
+  <div class="wrap">
+    <div class="sec__head">
+      <span class="num">02</span>
+      <h2 class="slam-head stamp">The Details</h2>
+    </div>
+
+    <dl class="grid">
+      <div class="cell stamp">
+        <dt>Date</dt>
+        <dd>Saturday<br>September 19, 2026</dd>
+      </div>
+      <div class="cell stamp">
+        <dt>Set Times</dt>
+        <dd>9:00 PM &ndash; 2:00 AM</dd>
+        <span class="sub">Doors at 8:30 PM</span>
+      </div>
+      <div class="cell stamp">
+        <dt>Venue</dt>
+        <dd>The Circle OC</dd>
+        <span class="sub">8901 Warner Avenue<br>Huntington Beach, CA 92647</span>
+        <a class="linkline" href="https://www.google.com/maps/search/?api=1&query=The+Circle+OC%2C+8901+Warner+Avenue%2C+Huntington+Beach%2C+CA+92647" target="_blank" rel="noopener">Get Directions &rarr;</a>
+      </div>
+      <div class="cell stamp">
+        <dt>Age</dt>
+        <dd>18+ to enter</dd>
+        <span class="sub">Government-issued photo ID required. No exceptions.</span>
+      </div>
+      <div class="cell stamp">
+        <dt>Dress Code</dt>
+        <dd>Casual or Festival</dd>
+      </div>
+      <div class="cell stamp">
+        <dt>Arrival</dt>
+        <dd>Come early</dd>
+        <span class="sub">Early arrival strongly suggested &mdash; lines get long.</span>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================== INFO STRIP ============================== -->
+<div class="strip" aria-label="Venue information">
+  <div class="strip__track">
+    <div class="strip__set">
+      <span class="strip__item">Free Parking</span><span class="strip__sep">&#9670;</span>
+      <span class="strip__item">Bottle Service &mdash; <a class="link" href="tel:+17146169959">714.616.9959</a></span><span class="strip__sep">&#9670;</span>
+      <span class="strip__item">All Sales Final &middot; No Refunds</span><span class="strip__sep">&#9670;</span>
+      <span class="strip__item">18+ w/ Photo ID</span><span class="strip__sep">&#9670;</span>
+      <span class="strip__item">Lines Get Long &mdash; Arrive Early</span><span class="strip__sep">&#9670;</span>
+    </div>
+    <div class="strip__set" aria-hidden="true">
+      <span class="strip__item">Free Parking</span><span class="strip__sep">&#9670;</span>
+      <span class="strip__item">Bottle Service &mdash; 714.616.9959</span><span class="strip__sep">&#9670;</span>
+      <span class="strip__item">All Sales Final &middot; No Refunds</span><span class="strip__sep">&#9670;</span>
+      <span class="strip__item">18+ w/ Photo ID</span><span class="strip__sep">&#9670;</span>
+      <span class="strip__item">Lines Get Long &mdash; Arrive Early</span><span class="strip__sep">&#9670;</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== CLOSER ============================== -->
+<section class="closer">
+  <div class="wrap">
+    <p class="kicker">Saturday &middot; September 19 &middot; 2026 &middot; The Circle OC</p>
+    <p class="big stamp">Don&rsquo;t Sleep</p>
+    <p class="bio stamp" style="margin:0 auto 30px;text-align:center">
+      Capacity is limited and all sales are final. Grab yours before the line does.
+    </p>
+    <a class="btn" href="https://www.eventbrite.com/e/wated-x-trinity-shogun-the-circle-oc-18-tickets-1993673585362" target="_blank" rel="noopener">
+      Get Tickets <span class="arrow">&#9656;</span>
+    </a>
+  </div>
+</section>
+
+</main>
+
+<!-- ============================== FOOTER ============================== -->
+<footer>
+  <div class="wrap foot">
+    <div>
+      <p class="foot__brand">WA<em>$</em>TED<br>&times; TRINITY</p>
+      <div class="socials">
+        <a href="https://www.instagram.com/wastedpresents/" target="_blank" rel="noopener">@wastedpresents</a>
+        <a href="https://www.instagram.com/trinity.presents/" target="_blank" rel="noopener">@trinity.presents</a>
+      </div>
+    </div>
+    <p class="fineprint">
+      Wasted Presents has spent 10 years running bass music and hard dance events across
+      California and Texas. Trinity is the hard-dance co-presenter for this show.<br><br>
+      18+ with government-issued photo ID. All sales are final &mdash; no refunds, no exchanges.
+      Lineup and set times subject to change. Management reserves all rights.<br><br>
+      &copy; 2026 WA$TED &times; TRINITY. Mockup layout.
+    </p>
+  </div>
+</footer>
+
+<!-- ============================== STICKY CTA ============================== -->
+<div class="sticky" id="sticky">
+  <div class="sticky__txt">
+    <b>SHOGUN &middot; The Circle OC</b>
+    Sat Sep 19, 2026 &middot; 9PM &middot; 18+
+  </div>
+  <a class="btn" href="https://www.eventbrite.com/e/wated-x-trinity-shogun-the-circle-oc-18-tickets-1993673585362" target="_blank" rel="noopener">
+    Tickets <span class="arrow">&#9656;</span>
+  </a>
+</div>
+
+<script src="https://w.soundcloud.com/player/api.js"></script>
+<script>
+(function(){
+  'use strict';
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var narrow  = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+
+  /* ---------------------------------------------------------
+     1. SHOGUN glitch — fires on load, then re-arms irregularly
+     --------------------------------------------------------- */
+  var shogun = document.getElementById('shogun');
+  function glitch(){
+    if(!shogun) return;
+    shogun.classList.remove('glitch');
+    void shogun.offsetWidth;            // force reflow to restart
+    shogun.classList.add('glitch');
+    window.setTimeout(function(){ shogun.classList.remove('glitch'); }, 520);
+  }
+  if(!reduced){
+    window.setTimeout(glitch, 380);
+    (function arm(){
+      var lo = narrow ? 8000 : 4000;
+      var hi = narrow ? 18000 : 11000;
+      window.setTimeout(function(){
+        if(!document.hidden) glitch();
+        arm();
+      }, lo + Math.random() * (hi - lo));
+    })();
+  }
+
+  /* ---------------------------------------------------------
+     2. Kinetic slam-in on scroll
+     --------------------------------------------------------- */
+  var stamps = document.querySelectorAll('.stamp, .flashline');
+  if(reduced || !('IntersectionObserver' in window)){
+    Array.prototype.forEach.call(stamps, function(el){ el.classList.add('slam'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(!en.isIntersecting) return;
+        var el = en.target;
+        var sibs = el.parentNode ? Array.prototype.indexOf.call(el.parentNode.children, el) : 0;
+        window.setTimeout(function(){ el.classList.add('slam'); }, Math.min(sibs, 5) * 55);
+        io.unobserve(el);
+      });
+    }, { threshold:.18, rootMargin:'0px 0px -8% 0px' });
+    Array.prototype.forEach.call(stamps, function(el){ io.observe(el); });
+  }
+
+  /* ---------------------------------------------------------
+     3. Sticky CTA — reveals once the hero is behind you
+     --------------------------------------------------------- */
+  var sticky = document.getElementById('sticky');
+  var hero   = document.querySelector('.hero');
+  if(sticky && hero && 'IntersectionObserver' in window){
+    new IntersectionObserver(function(e){
+      sticky.classList.toggle('show', !e[0].isIntersecting);
+    }, { threshold:0, rootMargin:'-60% 0px 0px 0px' }).observe(hero);
+  } else if(sticky){
+    sticky.classList.add('show');
+  }
+
+  /* ---------------------------------------------------------
+     4. Pseudo-waveform bars
+     --------------------------------------------------------- */
+  var wave  = document.getElementById('wave');
+  var BARS  = narrow ? 40 : 64;
+  var bars  = [];
+  if(wave){
+    var frag = document.createDocumentFragment();
+    for(var i = 0; i < BARS; i++){
+      var b = document.createElement('span');
+      // deterministic pseudo-random envelope so it reads like a real waveform
+      var t = i / BARS;
+      var h = 24
+            + Math.abs(Math.sin(i * 1.37)) * 42
+            + Math.abs(Math.sin(i * 0.41 + 1.1)) * 30
+            + Math.sin(t * Math.PI) * 16;
+      b.style.height = Math.max(10, Math.min(100, h)) + '%';
+      frag.appendChild(b);
+      bars.push(b);
+    }
+    wave.appendChild(frag);
+  }
+  function paint(p){
+    var edge = Math.round(p * BARS);
+    for(var i = 0; i < bars.length; i++){
+      var on = i < edge;
+      if(on !== (bars[i].className === 'on')) bars[i].className = on ? 'on' : '';
+    }
+  }
+
+  /* ---------------------------------------------------------
+     5. SoundCloud transport driven by the custom PRESS PLAY
+        Uses SoundCloud's own Widget API; falls back to the raw
+        postMessage protocol if api.js is unavailable.
+     --------------------------------------------------------- */
+  var iframe = document.getElementById('scPlayer');
+  var press  = document.getElementById('press');
+  var label  = document.getElementById('pressLabel');
+  var clock  = document.getElementById('clock');
+  var playing = false;
+
+  function mmss(ms){
+    var s = Math.max(0, Math.floor(ms / 1000));
+    return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  }
+  function setPlaying(on){
+    playing = on;
+    if(!press) return;
+    press.classList.toggle('is-playing', on);
+    press.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if(label) label.textContent = on ? 'Playing' : 'Press Play';
+    if(wave) wave.classList.toggle('is-live', on);
+  }
+
+  var api = null;
+
+  if(window.SC && SC.Widget && iframe){
+    /* --- official widget API --- */
+    var w = SC.Widget(iframe);
+    api = { play:function(){ w.play(); }, pause:function(){ w.pause(); } };
+    w.bind(SC.Widget.Events.PLAY,  function(){ setPlaying(true);  });
+    w.bind(SC.Widget.Events.PAUSE, function(){ setPlaying(false); });
+    w.bind(SC.Widget.Events.FINISH,function(){ setPlaying(false); paint(0); if(clock) clock.textContent = '0:00'; });
+    w.bind(SC.Widget.Events.PLAY_PROGRESS, function(e){
+      paint(e.relativePosition || 0);
+      if(clock) clock.textContent = mmss(e.currentPosition || 0);
+    });
+  } else if(iframe){
+    /* --- raw postMessage fallback --- */
+    var send = function(method, value){
+      try{
+        iframe.contentWindow.postMessage(JSON.stringify({ method:method, value:value }), '*');
+      }catch(err){}
+    };
+    api = { play:function(){ send('play'); }, pause:function(){ send('pause'); } };
+    window.addEventListener('message', function(ev){
+      if(typeof ev.data !== 'string' || ev.data.indexOf('{') !== 0) return;
+      var d;
+      try{ d = JSON.parse(ev.data); }catch(err){ return; }
+      if(d.method === 'ready'){
+        ['play','pause','finish','playProgress'].forEach(function(n){ send('addEventListener', n); });
+      } else if(d.method === 'play'){
+        setPlaying(true);
+      } else if(d.method === 'pause'){
+        setPlaying(false);
+      } else if(d.method === 'finish'){
+        setPlaying(false); paint(0);
+      } else if(d.method === 'playProgress' && d.value){
+        paint(d.value.relativePosition || 0);
+        if(clock) clock.textContent = mmss(d.value.currentPosition || 0);
+      }
+    });
+    send('addEventListener', 'ready');
+  }
+
+  if(press){
+    press.addEventListener('click', function(){
+      if(!api){
+        // last resort: hand the listener straight to SoundCloud
+        window.open('https://soundcloud.com/shogunsworld/can-you-feel-my-heart-shogun-remix-free-dl','_blank','noopener');
+        return;
+      }
+      playing ? api.pause() : api.play();
+    });
+  }
+})();
+</script>
+</body>
+</html>
