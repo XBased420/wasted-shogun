@@ -32,8 +32,7 @@
   --blood-hot:#FF1E3C;
   --gold:#CCC163;            /* WA$TED official mark */
   --hair:rgba(237,237,232,.16);
-  --beat:387ms;              /* ~155 BPM */
-  --bar:3.096s;              /* 8 beats  */
+  --beat:387ms;              /* ~155 BPM, idle PRESS PLAY pulse */
 
   /* Beat clock. Set ONCE when playback starts, never per frame.
      Every beat-driven animation below reads these, so they all stay
@@ -154,54 +153,7 @@ html.playing #grain{opacity:.34}
   to  {transform:translate3d(0,140vh,0)}
 }
 
-/* Flickering-fluorescent, NOT a hard strobe.
-   Irregular, low amplitude, capped well under 3Hz. */
-#strobe{
-  z-index:9004;
-  background:var(--paper);
-  opacity:0;
-  animation:flicker var(--bar) steps(1,end) infinite;
-  will-change:opacity;
-}
-@keyframes flicker{
-  0%,100%{opacity:0}
-  2%  {opacity:.055}
-  4%   {opacity:0}
-  25%  {opacity:.030}
-  26.5%{opacity:0}
-  49%  {opacity:.048}
-  50.5%{opacity:0}
-  51.5%{opacity:.022}
-  53%  {opacity:0}
-  74%  {opacity:.038}
-  75.5%{opacity:0}
-  93%  {opacity:.018}
-  94%  {opacity:0}
-}
-
 /* beat flash — the room light hitting on the kick */
-#beat{
-  z-index:9005;
-  background:radial-gradient(ellipse 80% 60% at 50% 38%, rgba(237,237,232,.55) 0%, rgba(200,16,46,.22) 45%, transparent 72%);
-  opacity:0;
-}
-html.playing #beat{
-  animation:beatFlash var(--bar-dur) linear infinite;
-  animation-delay:var(--beat-delay);
-  will-change:opacity;
-}
-@keyframes beatFlash{
-  0%  {opacity:.150}   /* downbeat */
-  11% {opacity:0}
-  25% {opacity:.070}
-  34% {opacity:0}
-  50% {opacity:.095}
-  59% {opacity:0}
-  75% {opacity:.070}
-  84% {opacity:0}
-  100%{opacity:0}
-}
-
 /* VHS tracking tear — fires on phrase boundaries */
 #tear{
   z-index:9006;
@@ -913,7 +865,6 @@ footer{
   html.playing #grain{opacity:.23}
   #scan{opacity:.34;animation:none}
   #roll{opacity:.035;animation-duration:9s}
-  #strobe{animation-duration:4.2s}
   .plate__smoke{filter:contrast(2.4) brightness(.66);animation-duration:30s}
   .plate__light,.plate__figure{animation-duration:30s}
   /* lighter push on phones */
@@ -943,7 +894,7 @@ footer{
    ============================================================ */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
-  #strobe,#roll,#beat,#tear{display:none}
+  #roll,#tear{display:none}
   #grain{animation:none;opacity:.2}
   #scan{animation:none;opacity:.3}
   .plate__smoke,.plate__light,.plate__figure{animation:none;filter:contrast(2.6) brightness(.62)}
@@ -952,14 +903,13 @@ footer{
   .shogun.glitch,.shogun.glitch::before,.shogun.glitch::after{animation:none}
   .shogun::before,.shogun::after{display:none}
   html.playing .logo,
-  html.playing #beat,
   html.playing .plate__beat,
   html.playing .shogun,
   html.playing .wave,
   html.playing .wave__fill,
   html.playing .strip::before,
   #grain::after{animation:none!important}
-  html.playing #beat,html.playing .strip::before{opacity:0}
+  html.playing .strip::before{opacity:0}
   .plate__beat{transform:none}
   .shogun-shake{transform:none!important}
   .wave__fill{clip-path:inset(0 0 0 0)}
@@ -986,8 +936,6 @@ footer{
 <div class="fx" id="grain"></div>
 <div class="fx" id="scan"></div>
 <div class="fx" id="roll"></div>
-<div class="fx" id="strobe"></div>
-<div class="fx" id="beat"></div>
 <div class="fx" id="tear"></div>
 
 <!-- ============================== HERO ============================== -->
@@ -1481,6 +1429,7 @@ footer{
     if(label) label.textContent = on ? 'Playing' : (userPaused ? 'Press Play' : 'Tap for Sound');
     if(wave) wave.classList.toggle('is-live', on);
     if(waveFill) waveFill.style.animationPlayState = on ? 'running' : 'paused';
+    if(on && typeof detachUnlock === 'function') detachUnlock();
     if(!on) stopPhrases();
   }
 
@@ -1516,7 +1465,13 @@ footer{
     api = { play:function(){ w.play(); }, pause:function(){ w.pause(); } };
     w.bind(SC.Widget.Events.READY, function(){
       w.getDuration(function(d){ durationMs = d || 0; });
-      if(!userPaused) w.play();
+      if(userPaused) return;
+      var tries = 0;
+      (function attempt(){
+        if(playing || userPaused || tries++ > 3) return;
+        w.play();
+        window.setTimeout(attempt, 450);
+      })();
     });
     w.bind(SC.Widget.Events.PLAY, function(){
       setPlaying(true);
@@ -1559,15 +1514,20 @@ footer{
     send('addEventListener', 'ready');
   }
 
-  /* first interaction unlocks audio if the browser blocked autoplay */
-  var unlocked = false;
+  /* Autoplay is requested on load, but every browser blocks sound before the
+     visitor has interacted. Keep retrying on each interaction until playback
+     actually starts, then stop listening. */
+  var KICKERS = ['pointerdown','keydown','touchstart','wheel','scroll'];
+  function detachUnlock(){
+    KICKERS.forEach(function(evt){ window.removeEventListener(evt, unlock); });
+  }
   function unlock(){
-    if(unlocked || playing || userPaused || !api) return;
-    unlocked = true;
+    if(userPaused || !api){ detachUnlock(); return; }
+    if(playing){ detachUnlock(); return; }
     api.play();
   }
-  ['pointerdown','keydown','touchstart','wheel','scroll'].forEach(function(evt){
-    window.addEventListener(evt, unlock, { once:true, passive:true });
+  KICKERS.forEach(function(evt){
+    window.addEventListener(evt, unlock, { passive:true });
   });
 
   /* the viewer stays in control */
