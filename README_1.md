@@ -13,18 +13,20 @@ dependencies are Google Fonts and SoundCloud's official embed.
 - Official WA$TED mark embedded as a traced inline SVG (~6.7KB) in the header and footer —
   vector, so it stays crisp at any size, and recolourable via `currentColor`
 - Fully procedural hero — SVG turbulence + silhouette, no raster assets
-- Animated film grain, drifting scanlines, CRT roll and a low-amplitude flicker
+- Animated film grain, drifting scanlines, a CRT roll band and a VHS tracking tear
 - Glitching `SHOGUN` headline with RGB channel split and slice displacement
 - Kinetic slam-in section headers, pointer parallax, scroll-velocity shake
 - Auto-fitting display type — measured against its container, so it can never clip
-- Music starts on load where the browser allows it, otherwise on first interaction;
-  the viewer can always pause from the PRESS PLAY control
+- Music autoplays on load where the browser allows it; where it doesn't, every
+  interaction retries until playback starts. The viewer can always pause from the
+  PRESS PLAY control, and a manual pause is never overridden
 
 ## Beat-reactive motion
 
-The page runs a beat clock off the SoundCloud widget's reported playback position.
-SoundCloud's iframe is cross-origin, so real frequency analysis isn't possible —
-this is a timed sync at a fixed BPM, but it lands on the kick.
+SoundCloud's iframe is cross-origin, so real frequency analysis isn't possible.
+Instead every beat-driven effect is a **CSS animation exactly one bar long**, and
+JS phase-locks them all to the track with a single negative `animation-delay`.
+After that the compositor runs the motion and **JS does no per-frame work at all**.
 
 Two constants at the top of the script tune it:
 
@@ -33,9 +35,32 @@ var BPM       = 155;  // track tempo
 var OFFSET_MS = 0;    // nudge +/- to line the kick up with the audio
 ```
 
-Driven by the clock: hero push and brightness, the beat flash overlay, CTA glow,
-the PRESS PLAY ring, waveform bars, the hazard-strip tint, a glitch every 4 bars
-and a VHS tracking tear every 8.
+Driven by the clock: hero push, CTA glow, the PRESS PLAY ring, the waveform, the
+hazard strip, the logo, a glitch every 4 bars and a VHS tracking tear every 8.
+The clock re-locks only on a seek, never on a timer.
+
+**No full-page brightness flashing.** Both flash layers were removed deliberately —
+a constant fluorescent flicker (`#strobe`) and a beat-synced radial pulse
+(`#beat`). Stacked, they read as incessant. The analog-broadcast texture that
+gives the page its look is separate and untouched: film grain, scanlines, the CRT
+roll band, the tracking tear and the headline glitch. Don't reintroduce a
+full-viewport opacity flash.
+
+## Performance notes
+
+The motion system deliberately avoids two things that cost a lot on phones:
+
+1. **No custom properties are written to `:root` per frame.** A root variable write
+   invalidates style for the entire document; measured at 6.7ms/frame against a
+   16.7ms budget. Values that must change per frame are written directly to the one
+   element that uses them (pointer parallax on `.plate__cam`, scroll smear on
+   `.shogun-shake`). Everything else is a CSS animation.
+2. **The waveform fill is one `clip-path` animation** running the length of the
+   track, not per-bar class toggling across 64 elements. It cannot step.
+
+Measured on a 4x-CPU-throttled 400px profile, scrolling the full page with the
+beat motion running: **59.5fps, zero long tasks, 544ms style recalc** (was 50.3fps
+and 4,002ms).
 
 ## The logo
 
@@ -49,6 +74,6 @@ referenced with `<use>` wherever it appears, so it costs its ~6.7KB once. It's f
 
 ## Accessibility
 
-`prefers-reduced-motion` stops the strobe, glitch, tear, parallax and Ken Burns
-while leaving the layout and palette identical. Flicker is low-amplitude and
-capped under 3 Hz. Motion is lightened on screens under 640px.
+`prefers-reduced-motion` stops the glitch, tear, beat animations, parallax and
+Ken Burns while leaving the layout and palette identical. There is no full-page
+flashing at all. Motion is lightened on screens under 640px.
