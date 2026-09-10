@@ -35,13 +35,13 @@
   --beat:387ms;              /* ~155 BPM */
   --bar:3.096s;              /* 8 beats  */
 
-  /* live motion channels, written by the beat clock */
-  --kick:0;                  /* 1 on the beat, decays to 0     */
-  --hit:0;                   /* 1 on the downbeat of each bar  */
-  --energy:0;                /* 0 idle, 1 while playing        */
-  --px:0;                    /* pointer parallax, -1..1        */
-  --py:0;
-  --shake:0;                 /* scroll-velocity glitch, 0..1   */
+  /* Beat clock. Set ONCE when playback starts, never per frame.
+     Every beat-driven animation below reads these, so they all stay
+     in phase with each other and with the track for free. One bar =
+     4 beats, so a single bar-length keyframe covers a whole measure. */
+  --beat-dur:387ms;
+  --bar-dur:1548ms;
+  --beat-delay:0ms;
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -93,25 +93,34 @@ a{color:inherit}
    ============================================================ */
 .fx{position:fixed;inset:0;pointer-events:none;z-index:9000}
 
+/* The noise tile lives on an oversized child so it can be moved with
+   transform (compositor) instead of background-position (repaint). */
 #grain{
   z-index:9001;
-  opacity:calc(.26 + var(--energy) * .12);
+  opacity:.26;
   mix-blend-mode:overlay;
+  overflow:hidden;
+}
+#grain::after{
+  content:"";
+  position:absolute;
+  inset:-140px;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size:260px 260px;
   animation:grainshift 640ms steps(1,end) infinite;
-  will-change:background-position;
+  will-change:transform;
 }
+html.playing #grain{opacity:.34}
 @keyframes grainshift{
-  0%  {background-position:0 0}
-  12% {background-position:-42px 31px}
-  25% {background-position:19px -58px}
-  37% {background-position:-73px -12px}
-  50% {background-position:55px 44px}
-  62% {background-position:-24px 67px}
-  75% {background-position:71px -35px}
-  87% {background-position:-61px 8px}
-  100%{background-position:0 0}
+  0%  {transform:translate3d(0,0,0)}
+  12% {transform:translate3d(-42px,31px,0)}
+  25% {transform:translate3d(19px,-58px,0)}
+  37% {transform:translate3d(-73px,-12px,0)}
+  50% {transform:translate3d(55px,44px,0)}
+  62% {transform:translate3d(-24px,67px,0)}
+  75% {transform:translate3d(71px,-35px,0)}
+  87% {transform:translate3d(-61px,8px,0)}
+  100%{transform:translate3d(0,0,0)}
 }
 
 #scan{
@@ -174,8 +183,23 @@ a{color:inherit}
 #beat{
   z-index:9005;
   background:radial-gradient(ellipse 80% 60% at 50% 38%, rgba(237,237,232,.55) 0%, rgba(200,16,46,.22) 45%, transparent 72%);
-  opacity:calc(var(--kick) * .085 + var(--hit) * .075);
+  opacity:0;
+}
+html.playing #beat{
+  animation:beatFlash var(--bar-dur) linear infinite;
+  animation-delay:var(--beat-delay);
   will-change:opacity;
+}
+@keyframes beatFlash{
+  0%  {opacity:.150}   /* downbeat */
+  11% {opacity:0}
+  25% {opacity:.070}
+  34% {opacity:0}
+  50% {opacity:.095}
+  59% {opacity:0}
+  75% {opacity:.070}
+  84% {opacity:0}
+  100%{opacity:0}
 }
 
 /* VHS tracking tear — fires on phrase boundaries */
@@ -215,23 +239,39 @@ a{color:inherit}
 /* --- procedural photography stack (no raster assets) --- */
 .plate{position:absolute;inset:0;z-index:-3;overflow:hidden;background:#000}
 
-/* camera: carries parallax + the beat push, so the crop box stays put */
+/* Two nested layers so each owns exactly one transform and they never
+   fight: .plate__cam is written by JS (pointer parallax only, and only
+   on a real mouse), .plate__beat is a pure CSS animation. */
 .plate__cam{
   position:absolute;inset:-6%;
-  transform:
-    translate3d(calc(var(--px) * -16px), calc(var(--py) * -11px), 0)
-    scale(calc(1 + var(--kick) * .014 + var(--hit) * .010));
   will-change:transform;
+}
+.plate__beat{position:absolute;inset:0}
+html.playing .plate__beat{
+  animation:camPush var(--bar-dur) linear infinite;
+  animation-delay:var(--beat-delay);
+  will-change:transform;
+}
+@keyframes camPush{
+  0%  {transform:scale(1.018)}
+  13% {transform:scale(1)}
+  25% {transform:scale(1.008)}
+  36% {transform:scale(1)}
+  50% {transform:scale(1.012)}
+  61% {transform:scale(1)}
+  75% {transform:scale(1.008)}
+  86% {transform:scale(1)}
+  100%{transform:scale(1)}
 }
 
 .plate__smoke{
   position:absolute;inset:-10%;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.009' numOctaves='5' seed='19'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='900' height='900' filter='url(%23s)'/%3E%3C/svg%3E");
   background-size:cover;
-  filter:contrast(2.9) brightness(calc(.60 + var(--kick) * .14));
+  filter:contrast(2.9) brightness(.62);
   opacity:.9;
   animation:kenburns 24s ease-in-out infinite alternate;
-  will-change:transform,filter;
+  will-change:transform;
 }
 @keyframes kenburns{
   from{transform:scale(1.02) translate3d(-1.2%,1%,0)}
@@ -245,9 +285,9 @@ a{color:inherit}
       rgba(237,237,232,.60) 0%,
       rgba(237,237,232,.16) 42%,
       rgba(237,237,232,0) 72%);
-  opacity:calc(.85 + var(--kick) * .30);
+  opacity:.9;
   animation:kenburns 24s ease-in-out infinite alternate;
-  will-change:transform,opacity;
+  will-change:transform;
 }
 
 .plate__figure{
@@ -300,10 +340,14 @@ a{color:inherit}
 
 /* the mark breathes with the kick, gently */
 html.playing .logo{
-  transform:scale(calc(1 + var(--kick) * .018));
-  filter:drop-shadow(0 2px 18px rgba(0,0,0,.9))
-         brightness(calc(1 + var(--kick) * .22));
-  will-change:transform,filter;
+  animation:logoKick var(--bar-dur) linear infinite;
+  animation-delay:var(--beat-delay);
+  will-change:transform;
+}
+@keyframes logoKick{
+  0%{transform:scale(1.02)} 14%{transform:scale(1)}
+  50%{transform:scale(1.01)} 62%{transform:scale(1)}
+  100%{transform:scale(1)}
 }
 
 .hero__top .kicker{text-align:right;line-height:1.9}
@@ -334,12 +378,22 @@ html.playing .logo{
   text-transform:uppercase;
   white-space:nowrap;
   color:var(--paper);
-  text-shadow:
-    0 0 60px rgba(0,0,0,.9),
-    calc(var(--kick) * -3px) 0 rgba(255,30,60,calc(var(--energy) * .55)),
-    calc(var(--kick) * 3px) 0 rgba(0,229,208,calc(var(--energy) * .40));
-  transform:translate3d(calc(var(--shake) * -6px),0,0) scale(calc(1 + var(--hit) * .012));
-  will-change:transform,text-shadow;
+  text-shadow:0 0 60px rgba(0,0,0,.9);
+}
+/* scroll-velocity smear lives on the wrapper so the beat scale below
+   never has to share a transform with it */
+.shogun-shake{display:block;will-change:transform}
+html.playing .shogun{
+  animation:shogunKick var(--bar-dur) linear infinite;
+  animation-delay:var(--beat-delay);
+  will-change:transform;
+}
+@keyframes shogunKick{
+  0%  {transform:scale(1.014)}
+  12% {transform:scale(1)}
+  50% {transform:scale(1.007)}
+  60% {transform:scale(1)}
+  100%{transform:scale(1)}
 }
 .shogun::before,.shogun::after{
   content:attr(data-text);
@@ -436,10 +490,19 @@ html.playing .logo{
 }
 /* while the track runs, the CTA glow rides the kick instead */
 html.playing .btn{
-  animation:none;
-  box-shadow:
-    0 0 calc(18px + var(--kick) * 44px) calc(-8px + var(--kick) * 6px) var(--glow),
-    0 0 0 calc(var(--hit) * 5px) rgba(200,16,46,calc(.35 - var(--hit) * .35));
+  animation:ctaKick var(--bar-dur) linear infinite;
+  animation-delay:var(--beat-delay);
+}
+@keyframes ctaKick{
+  0%  {box-shadow:0 0 52px 0px var(--glow), 0 0 0 0 rgba(200,16,46,.42)}
+  15% {box-shadow:0 0 18px -8px var(--glow), 0 0 0 8px rgba(200,16,46,0)}
+  25% {box-shadow:0 0 30px -5px var(--glow)}
+  36% {box-shadow:0 0 18px -8px var(--glow)}
+  50% {box-shadow:0 0 38px -3px var(--glow)}
+  61% {box-shadow:0 0 18px -8px var(--glow)}
+  75% {box-shadow:0 0 30px -5px var(--glow)}
+  86% {box-shadow:0 0 18px -8px var(--glow)}
+  100%{box-shadow:0 0 18px -8px var(--glow)}
 }
 .btn:hover,.btn:focus-visible{background:var(--paper);color:var(--ink);border-color:var(--paper);transform:translate3d(0,-2px,0)}
 .btn:active{transform:translate3d(0,1px,0)}
@@ -482,12 +545,16 @@ html.playing .btn{
 .press.is-playing{
   border-color:var(--blood);
   color:var(--blood-hot);
-  animation:none;
-  transform:scale(calc(1 + var(--kick) * .022));
-  box-shadow:
-    0 0 0 calc(var(--kick) * 7px) rgba(200,16,46,calc(.28 - var(--kick) * .28)),
-    inset 0 0 calc(var(--kick) * 26px) -6px rgba(200,16,46,.55);
-  will-change:transform,box-shadow;
+  animation:pressKick var(--bar-dur) linear infinite;
+  animation-delay:var(--beat-delay);
+  will-change:transform;
+}
+@keyframes pressKick{
+  0%  {transform:scale(1.026); box-shadow:0 0 0 0 rgba(200,16,46,.32), inset 0 0 28px -6px rgba(200,16,46,.55)}
+  14% {transform:scale(1);     box-shadow:0 0 0 9px rgba(200,16,46,0), inset 0 0 0 -6px rgba(200,16,46,0)}
+  50% {transform:scale(1.013); box-shadow:0 0 0 0 rgba(200,16,46,.18), inset 0 0 18px -6px rgba(200,16,46,.4)}
+  62% {transform:scale(1);     box-shadow:0 0 0 7px rgba(200,16,46,0), inset 0 0 0 -6px rgba(200,16,46,0)}
+  100%{transform:scale(1);     box-shadow:0 0 0 0 rgba(200,16,46,0)}
 }
 .press.is-playing:hover{background:var(--blood);color:var(--paper)}
 .press::after{
@@ -517,25 +584,45 @@ html.playing .btn{
 
 /* pseudo-waveform: bars fill red with playback and jump on the kick */
 .wave{
-  display:flex;align-items:flex-end;gap:2px;
+  position:relative;
   height:34px;
   opacity:.42;
+  transform-origin:bottom;
   transition:opacity .3s;
 }
 .wave.is-live{opacity:1}
-.wave span{
+.wave__bars{
+  position:absolute;inset:0;
+  display:flex;align-items:flex-end;gap:2px;
+}
+.wave__bars span{
   flex:1 1 auto;
   min-width:2px;
   background:var(--hair);
-  transform-origin:bottom;
-  transition:background .18s linear;
 }
-.wave span.on{background:var(--blood)}
-.wave.is-live span.on:nth-child(3n){background:var(--blood-hot)}
-.wave.is-live span.on{transform:scaleY(calc(1 + var(--kick) * .35))}
-.wave.is-live span.head{
-  background:var(--paper);
-  transform:scaleY(calc(1 + var(--kick) * .9));
+/* the played portion is a second, identical bar layer revealed by a single
+   clip-path animation that runs the length of the track — one element, one
+   property, interpolated by the compositor, so it can't step */
+.wave__fill{clip-path:inset(0 100% 0 0)}
+.wave__fill span{background:var(--blood)}
+.wave__fill span:nth-child(3n){background:var(--blood-hot)}
+html.playing .wave__fill{will-change:clip-path}
+@keyframes waveFill{
+  from{clip-path:inset(0 100% 0 0)}
+  to  {clip-path:inset(0 0 0 0)}
+}
+/* the kick bounce scales the container — 1 element instead of 64 */
+html.playing .wave{
+  animation:waveKick var(--bar-dur) linear infinite;
+  animation-delay:var(--beat-delay);
+  will-change:transform;
+}
+@keyframes waveKick{
+  0%  {transform:scaleY(1.16)}
+  13% {transform:scaleY(1)}
+  50% {transform:scaleY(1.07)}
+  61% {transform:scaleY(1)}
+  100%{transform:scaleY(1)}
 }
 
 .audio__label{
@@ -694,12 +781,28 @@ section{position:relative;z-index:1}
   border-block:1px solid var(--blood);
   background:
     repeating-linear-gradient(135deg,
-      rgba(200,16,46,calc(.14 + var(--hit) * .22)) 0 14px,
+      rgba(200,16,46,.14) 0 14px,
       transparent 14px 28px);
   overflow:hidden;
   padding-block:16px;
   white-space:nowrap;
   max-width:100%;
+  position:relative;
+}
+.strip::before{
+  content:"";
+  position:absolute;inset:0;
+  background:rgba(200,16,46,.20);
+  opacity:0;
+  pointer-events:none;
+}
+html.playing .strip::before{
+  animation:stripPulse var(--bar-dur) linear infinite;
+  animation-delay:var(--beat-delay);
+  will-change:opacity;
+}
+@keyframes stripPulse{
+  0%{opacity:1} 16%{opacity:0} 50%{opacity:.55} 64%{opacity:0} 100%{opacity:0}
 }
 .strip__track{display:inline-flex;animation:marquee 34s linear infinite;will-change:transform}
 .strip__set{display:inline-flex;align-items:center;flex:none}
@@ -742,9 +845,8 @@ section{position:relative;z-index:1}
   display:flex;align-items:center;justify-content:space-between;
   gap:14px;
   padding:12px clamp(14px,4vw,28px);
-  background:rgba(0,0,0,.92);
+  background:rgba(0,0,0,.96);
   border-top:1px solid var(--blood);
-  backdrop-filter:blur(8px);
   transform:translate3d(0,110%,0);
   transition:transform .34s cubic-bezier(.9,0,.1,1);
 }
@@ -806,15 +908,21 @@ footer{
 
 @media (max-width:640px){
   .grid{grid-template-columns:1fr}
-  #grain{opacity:calc(.16 + var(--energy) * .07);animation-duration:900ms}
+  #grain{opacity:.17}
+  #grain::after{animation-duration:900ms}
+  html.playing #grain{opacity:.23}
   #scan{opacity:.34;animation:none}
   #roll{opacity:.035;animation-duration:9s}
   #strobe{animation-duration:4.2s}
-  #beat{opacity:calc(var(--kick) * .05 + var(--hit) * .05)}
-  .plate__smoke{filter:contrast(2.4) brightness(calc(.64 + var(--kick) * .10));animation-duration:30s}
+  .plate__smoke{filter:contrast(2.4) brightness(.66);animation-duration:30s}
   .plate__light,.plate__figure{animation-duration:30s}
-  .plate__cam{transform:scale(calc(1 + var(--kick) * .008))}
-  .sticky{backdrop-filter:none;background:#000}
+  /* lighter push on phones */
+  @keyframes camPush{
+    0%{transform:scale(1.009)} 13%{transform:scale(1)}
+    50%{transform:scale(1.005)} 61%{transform:scale(1)}
+    100%{transform:scale(1)}
+  }
+  .sticky{background:#000}
   .hero__bot{flex-direction:column;align-items:stretch}
   .hero__bot .btn{justify-content:center}
   .audio{width:100%}
@@ -843,10 +951,20 @@ footer{
   .shogun{transform:none;text-shadow:0 0 60px rgba(0,0,0,.9)}
   .shogun.glitch,.shogun.glitch::before,.shogun.glitch::after{animation:none}
   .shogun::before,.shogun::after{display:none}
-  html.playing .logo{transform:none;filter:drop-shadow(0 2px 18px rgba(0,0,0,.9))}
+  html.playing .logo,
+  html.playing #beat,
+  html.playing .plate__beat,
+  html.playing .shogun,
+  html.playing .wave,
+  html.playing .wave__fill,
+  html.playing .strip::before,
+  #grain::after{animation:none!important}
+  html.playing #beat,html.playing .strip::before{opacity:0}
+  .plate__beat{transform:none}
+  .shogun-shake{transform:none!important}
+  .wave__fill{clip-path:inset(0 0 0 0)}
   .btn,html.playing .btn,.press,.press::after{animation:none;box-shadow:none}
   .press.is-playing{transform:none}
-  .wave.is-live span.on,.wave.is-live span.head{transform:none}
   .strip__track{animation:none}
   .stamp{opacity:1;transform:none}
   .stamp.slam,.flashline.slam{animation:none}
@@ -876,6 +994,7 @@ footer{
 <header class="hero">
   <div class="plate" aria-hidden="true">
     <div class="plate__cam">
+     <div class="plate__beat">
       <div class="plate__smoke"></div>
       <div class="plate__light"></div>
       <svg class="plate__figure" viewBox="0 0 800 900" preserveAspectRatio="xMidYMax slice">
@@ -891,6 +1010,7 @@ footer{
           <path d="M400 386c66 0 112 34 150 78 74 84 132 196 160 436H90c28-240 86-352 160-436 38-44 84-78 150-78z"/>
         </g>
       </svg>
+     </div>
     </div>
     <div class="plate__grade"></div>
   </div>
@@ -908,7 +1028,7 @@ footer{
 
   <div class="hero__mid wrap">
     <p class="presents">Presents</p>
-    <h1 class="shogun fitline" id="shogun" data-fit="hero" data-text="SHOGUN">SHOGUN</h1>
+    <span class="shogun-shake" id="shogunShake"><h1 class="shogun fitline" id="shogun" data-fit="hero" data-text="SHOGUN">SHOGUN</h1></span>
     <p class="hero__meta">
       <span>Sat &middot; Sep 19 &middot; 2026</span>
       <span class="dot">/</span>
@@ -924,7 +1044,10 @@ footer{
         <span class="press__icon" aria-hidden="true"></span>
         <span id="pressLabel">Press Play</span>
       </button>
-      <div class="wave" id="wave" aria-hidden="true"></div>
+      <div class="wave" id="wave" aria-hidden="true">
+        <div class="wave__bars" id="waveBase"></div>
+        <div class="wave__bars wave__fill" id="waveFill"></div>
+      </div>
       <div class="audio__label">
         <span><b>Can You Feel My Heart</b> &mdash; Shogun Remix</span>
         <span id="clock">0:00</span>
@@ -1209,10 +1332,19 @@ footer{
   }
 
   /* =========================================================
-     4. Waveform bars
+     4. Waveform — two static bar layers revealed by ONE clip-path
+        animation running the length of the track.
+
+        The old version toggled classes on up to 64 spans and only
+        advanced when an integer bar index changed, i.e. about once
+        every 3.7s on a 4-minute track. That is what was visibly
+        stepping. This version does no per-frame work at all: the
+        compositor interpolates the reveal.
      ========================================================= */
-  var BARS = narrow ? 40 : 64, bars = [];
-  if(wave){
+  var waveFill = document.getElementById('waveFill');
+  var BARS = narrow ? 40 : 64;
+  function buildBars(el){
+    if(!el) return;
     var frag = document.createDocumentFragment();
     for(var i = 0; i < BARS; i++){
       var b = document.createElement('span'), t = i / BARS;
@@ -1221,71 +1353,122 @@ footer{
             + Math.abs(Math.sin(i * 0.41 + 1.1)) * 30
             + Math.sin(t * Math.PI) * 16;
       b.style.height = Math.max(10, Math.min(100, h)) + '%';
-      frag.appendChild(b); bars.push(b);
+      frag.appendChild(b);
     }
-    wave.appendChild(frag);
+    el.appendChild(frag);
   }
-  var lastEdge = -1;
-  function paint(p){
-    var edge = Math.round(p * BARS);
-    if(edge === lastEdge) return;
-    lastEdge = edge;
-    for(var i = 0; i < bars.length; i++){
-      var cls = i < edge ? (i === edge - 1 ? 'on head' : 'on') : '';
-      if(bars[i].className !== cls) bars[i].className = cls;
-    }
-  }
+  buildBars(document.getElementById('waveBase'));
+  buildBars(waveFill);
 
   /* =========================================================
-     5. Pointer parallax + scroll-velocity shake
+     5. Pointer parallax + scroll smear
+
+        Both write a transform straight to ONE element. They used to
+        write custom properties on :root, which invalidates style for
+        the whole document on every frame — measured at 6.7ms/frame
+        against a 16.7ms budget.
      ========================================================= */
-  if(!reduced && window.matchMedia('(pointer:fine)').matches){
+  var cam = document.querySelector('.plate__cam');
+  if(cam && !reduced && window.matchMedia('(pointer:fine)').matches){
     var pxT = 0, pyT = 0, pxC = 0, pyC = 0, parked = true;
+    var easeParallax = function(){
+      pxC += (pxT - pxC) * .06;
+      pyC += (pyT - pyC) * .06;
+      cam.style.transform = 'translate3d(' + (pxC * -16).toFixed(2) + 'px,' +
+                                             (pyC * -11).toFixed(2) + 'px,0)';
+      if(Math.abs(pxT - pxC) > .002 || Math.abs(pyT - pyC) > .002){
+        requestAnimationFrame(easeParallax);
+      } else { parked = true; }
+    };
     window.addEventListener('mousemove', function(e){
       pxT = (e.clientX / window.innerWidth  - .5) * 2;
       pyT = (e.clientY / window.innerHeight - .5) * 2;
       if(parked){ parked = false; requestAnimationFrame(easeParallax); }
     }, { passive:true });
-    function easeParallax(){
-      pxC += (pxT - pxC) * .06;
-      pyC += (pyT - pyC) * .06;
-      root.style.setProperty('--px', pxC.toFixed(4));
-      root.style.setProperty('--py', pyC.toFixed(4));
-      if(Math.abs(pxT - pxC) > .002 || Math.abs(pyT - pyC) > .002){
-        requestAnimationFrame(easeParallax);
-      } else { parked = true; }
-    }
   }
 
-  if(!reduced){
+  var shakeEl = document.getElementById('shogunShake');
+  if(shakeEl && !reduced){
     var lastY = window.scrollY, shake = 0, shakeRAF = 0;
+    var decayShake = function(){
+      shake *= .86;
+      shakeEl.style.transform = shake > .01
+        ? 'translate3d(' + (shake * -6).toFixed(2) + 'px,0,0)' : '';
+      shakeRAF = shake > .01 ? requestAnimationFrame(decayShake) : 0;
+    };
     window.addEventListener('scroll', function(){
       var y = window.scrollY, v = Math.min(1, Math.abs(y - lastY) / 90);
       lastY = y;
       if(v > shake) shake = v;
       if(!shakeRAF) shakeRAF = requestAnimationFrame(decayShake);
     }, { passive:true });
-    function decayShake(){
-      shake *= .86;
-      root.style.setProperty('--shake', shake.toFixed(4));
-      shakeRAF = shake > .01 ? requestAnimationFrame(decayShake) : 0;
-      if(!shakeRAF) root.style.setProperty('--shake', 0);
-    }
   }
 
   /* =========================================================
      6. SoundCloud transport + the beat clock
+
         SoundCloud's iframe is cross-origin, so real frequency
-        analysis is off the table. Instead the motion runs on a
-        clock locked to the widget's reported playback position,
-        which lands on the kick at a fixed BPM.
+        analysis is impossible. Instead every beat-driven effect is a
+        CSS animation one bar long, and JS phase-locks them all to the
+        track with a single negative animation-delay. After that the
+        compositor runs the motion and JS does nothing per frame.
      ========================================================= */
+
+  /* ---- tune these two if the sync drifts ---- */
+  var BPM       = 155;   // hard techno; matches the --beat-dur CSS var
+  var OFFSET_MS = 0;     // nudge + / - to line the kick up with the track
+
+  var BEAT_MS = 60000 / BPM;
+  var BAR_MS  = BEAT_MS * 4;
+
   var playing = false, userPaused = false, api = null;
-  var posMs = 0, posAt = 0, beatRAF = 0, lastBeatIndex = -1, energy = 0;
+  var durationMs = 0, syncPos = 0, syncAt = 0, lastSec = -1;
+  var phraseTimers = [];
 
   function mmss(ms){
     var s = Math.max(0, Math.floor(ms / 1000));
     return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  }
+
+  /* one write, at playback start — not sixty a second */
+  function lockBeatClock(positionMs){
+    var delay = -(((positionMs + OFFSET_MS) % BAR_MS));
+    root.style.setProperty('--beat-dur', BEAT_MS.toFixed(2) + 'ms');
+    root.style.setProperty('--bar-dur',  BAR_MS.toFixed(2)  + 'ms');
+    root.style.setProperty('--beat-delay', delay.toFixed(1) + 'ms');
+    syncPos = positionMs;
+    syncAt  = performance.now();
+  }
+
+  function startFill(positionMs){
+    if(!waveFill || !durationMs || reduced) return;
+    waveFill.style.animation = 'none';
+    void waveFill.offsetWidth;                       // restart
+    waveFill.style.animation = 'waveFill ' + Math.round(durationMs) +
+                               'ms linear ' + Math.round(-positionMs) + 'ms 1 forwards';
+    waveFill.style.animationPlayState = playing ? 'running' : 'paused';
+  }
+
+  function stopPhrases(){
+    for(var i = 0; i < phraseTimers.length; i++){
+      clearTimeout(phraseTimers[i]); clearInterval(phraseTimers[i]);
+    }
+    phraseTimers = [];
+  }
+  function startPhrases(positionMs){
+    stopPhrases();
+    if(reduced) return;
+    var gEvery = BAR_MS * 4;                          // glitch every 4 bars
+    var tEvery = BAR_MS * 8;                          // tracking tear every 8
+    var pos = positionMs + OFFSET_MS;
+    phraseTimers.push(setTimeout(function(){
+      glitch();
+      phraseTimers.push(setInterval(glitch, gEvery));
+    }, gEvery - (pos % gEvery)));
+    phraseTimers.push(setTimeout(function(){
+      trackingTear();
+      phraseTimers.push(setInterval(trackingTear, tEvery));
+    }, tEvery - (pos % tEvery)));
   }
 
   function setPlaying(on){
@@ -1297,61 +1480,55 @@ footer{
     }
     if(label) label.textContent = on ? 'Playing' : (userPaused ? 'Press Play' : 'Tap for Sound');
     if(wave) wave.classList.toggle('is-live', on);
-    if(on && !beatRAF && !reduced) beatRAF = requestAnimationFrame(beatLoop);
+    if(waveFill) waveFill.style.animationPlayState = on ? 'running' : 'paused';
+    if(!on) stopPhrases();
   }
 
-  function beatLoop(){
-    if(!playing){
-      beatRAF = 0;
-      energy = 0;
-      root.style.setProperty('--energy', 0);
-      root.style.setProperty('--kick', 0);
-      root.style.setProperty('--hit', 0);
-      return;
+  function onProgress(rel, cur){
+    var pos = cur || 0;
+
+    /* clock text at most once a second, not every event */
+    if(clock){
+      var sec = Math.floor(pos / 1000);
+      if(sec !== lastSec){ lastSec = sec; clock.textContent = mmss(pos); }
     }
-    energy += (1 - energy) * .04;
+    if(!playing) return;
 
-    // extrapolate between PLAY_PROGRESS events for a smooth phase
-    var now  = performance.now();
-    var pos  = posMs + (now - posAt) + OFFSET_MS;
-    var beat = pos / BEAT_MS;
-    var idx  = Math.floor(beat);
-    var ph   = beat - idx;
-
-    var kick = Math.pow(1 - ph, 3.4);
-    var hit  = (idx % 4 === 0) ? Math.pow(1 - ph, 4.5) : 0;
-
-    root.style.setProperty('--kick', kick.toFixed(4));
-    root.style.setProperty('--hit',  hit.toFixed(4));
-    root.style.setProperty('--energy', energy.toFixed(4));
-
-    if(idx !== lastBeatIndex){
-      lastBeatIndex = idx;
-      if(idx % 32 === 0) trackingTear();   // every 8 bars
-      else if(idx % 16 === 0) glitch();    // every 4 bars
+    /* The CSS animations run on wall-clock, so they only diverge from
+       the track on a seek or a stall. Re-lock only when that actually
+       happens — a re-lock is visible, so it must stay rare. */
+    var expected = syncPos + (performance.now() - syncAt);
+    if(Math.abs(pos - expected) > 250){
+      lockBeatClock(pos);
+      startFill(pos);
+      startPhrases(pos);
     }
-    beatRAF = requestAnimationFrame(beatLoop);
   }
 
-  function onProgress(relative, current){
-    posMs = current || 0;
-    posAt = performance.now();
-    paint(relative || 0);
-    if(clock) clock.textContent = mmss(posMs);
+  function beginAt(positionMs){
+    lockBeatClock(positionMs);
+    startFill(positionMs);
+    startPhrases(positionMs);
   }
 
   if(window.SC && SC.Widget && iframe){
     var w = SC.Widget(iframe);
     api = { play:function(){ w.play(); }, pause:function(){ w.pause(); } };
     w.bind(SC.Widget.Events.READY, function(){
-      // autoplay attempt — browsers block sound before interaction,
-      // so the first click/scroll/keypress starts it instead
+      w.getDuration(function(d){ durationMs = d || 0; });
       if(!userPaused) w.play();
     });
-    w.bind(SC.Widget.Events.PLAY,   function(){ setPlaying(true);  });
+    w.bind(SC.Widget.Events.PLAY, function(){
+      setPlaying(true);
+      w.getPosition(function(pos){
+        if(!durationMs){ w.getDuration(function(d){ durationMs = d || 0; beginAt(pos || 0); }); }
+        else beginAt(pos || 0);
+      });
+    });
     w.bind(SC.Widget.Events.PAUSE,  function(){ setPlaying(false); });
     w.bind(SC.Widget.Events.FINISH, function(){
-      setPlaying(false); lastEdge = -1; paint(0);
+      setPlaying(false);
+      if(waveFill) waveFill.style.animation = 'none';
       if(clock) clock.textContent = '0:00';
     });
     w.bind(SC.Widget.Events.PLAY_PROGRESS, function(e){
@@ -1359,7 +1536,7 @@ footer{
     });
   } else if(iframe){
     var send = function(m, v){
-      try{ iframe.contentWindow.postMessage(JSON.stringify({method:m, value:v}), '*'); }catch(err){}
+      try{ iframe.contentWindow.postMessage(JSON.stringify({ method:m, value:v }), '*'); }catch(err){}
     };
     api = { play:function(){ send('play'); }, pause:function(){ send('pause'); } };
     window.addEventListener('message', function(ev){
@@ -1369,10 +1546,13 @@ footer{
         ['play','pause','finish','playProgress'].forEach(function(n){ send('addEventListener', n); });
         if(!userPaused) send('play');
       }
-      else if(d.method === 'play')   setPlaying(true);
+      else if(d.method === 'play'){ setPlaying(true); beginAt(0); }
       else if(d.method === 'pause')  setPlaying(false);
-      else if(d.method === 'finish'){ setPlaying(false); lastEdge = -1; paint(0); }
+      else if(d.method === 'finish'){ setPlaying(false); if(waveFill) waveFill.style.animation='none'; }
       else if(d.method === 'playProgress' && d.value){
+        if(!durationMs && d.value.relativePosition > 0){
+          durationMs = d.value.currentPosition / d.value.relativePosition;
+        }
         onProgress(d.value.relativePosition, d.value.currentPosition);
       }
     });
@@ -1402,13 +1582,11 @@ footer{
     });
   }
 
-  /* don't burn frames in a background tab */
+  /* nothing runs per frame any more, but stop the phrase timers
+     from piling up while the tab is hidden */
   document.addEventListener('visibilitychange', function(){
-    if(document.hidden){
-      if(beatRAF){ cancelAnimationFrame(beatRAF); beatRAF = 0; }
-    } else if(playing && !beatRAF && !reduced){
-      beatRAF = requestAnimationFrame(beatLoop);
-    }
+    if(document.hidden) stopPhrases();
+    else if(playing) startPhrases(syncPos + (performance.now() - syncAt));
   });
 })();
 </script>
