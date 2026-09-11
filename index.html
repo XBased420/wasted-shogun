@@ -563,19 +563,6 @@ html.playing .wave__fill{will-change:clip-path}
   from{clip-path:inset(0 100% 0 0)}
   to  {clip-path:inset(0 0 0 0)}
 }
-/* the kick bounce scales the container — 1 element instead of 64 */
-html.playing .wave{
-  animation:waveKick var(--bar-dur) linear infinite;
-  animation-delay:var(--beat-delay);
-  will-change:transform;
-}
-@keyframes waveKick{
-  0%  {transform:scaleY(1.16)}
-  13% {transform:scaleY(1)}
-  50% {transform:scaleY(1.07)}
-  61% {transform:scaleY(1)}
-  100%{transform:scaleY(1)}
-}
 
 .audio__label{
   display:flex;justify-content:space-between;gap:12px;
@@ -1013,7 +1000,6 @@ html:not(.entered) body{overflow:hidden}
   html.playing .logo,
   html.playing .plate__beat,
   html.playing .shogun,
-  html.playing .wave,
   html.playing .wave__fill,
   html.playing .strip::before,
   #grain::after{animation:none!important}
@@ -1089,9 +1075,8 @@ html:not(.entered) body{overflow:hidden}
       <svg class="logo" viewBox="0 0 1000 403.9" role="img" aria-label="WA$TED"><use href="#wastedMark"/></svg>
     </div>
     <div class="kicker">
-      The Circle OC<br>
-      Huntington Beach, CA<br>
-      18+ &middot; Doors 8:30 PM
+      18+ to Enter<br>
+      Government Photo ID
     </div>
   </div>
 
@@ -1196,7 +1181,7 @@ html:not(.entered) body{overflow:hidden}
       <div class="cell stamp">
         <dt>Set Times</dt>
         <dd>9:00 PM &ndash; 2:00 AM</dd>
-        <span class="sub">Doors at 8:30 PM</span>
+        <span class="sub">Doors open at 9:00 PM</span>
       </div>
       <div class="cell stamp">
         <dt>Venue</dt>
