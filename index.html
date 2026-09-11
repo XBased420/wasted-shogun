@@ -18,10 +18,11 @@
    Single-file event landing page. Inline CSS/JS only.
    External deps: Google Fonts + SoundCloud embed.
 
-   Motion runs on a beat clock derived from the SoundCloud
-   widget's playback position (BPM constant below). Cross-origin
-   embeds can't be tapped with Web Audio, so this is a timed
-   sync, not a frequency analyser — but it lands on the kick.
+   Motion is driven by an offline analysis of the actual track:
+   low-band energy for the kick, broadband RMS for the arrangement.
+   Cross-origin embeds can't be tapped with Web Audio, so the
+   analysis is baked in and replayed against the widget's position.
+   There is no tempo constant anywhere in this file.
    ============================================================ */
 
 :root{
@@ -33,13 +34,6 @@
   --gold:#CCC163;            /* WA$TED official mark */
   --hair:rgba(237,237,232,.16);
 
-  /* Beat clock. Set ONCE when playback starts, never per frame.
-     Every beat-driven animation below reads these, so they all stay
-     in phase with each other and with the track for free. One bar =
-     4 beats, so a single bar-length keyframe covers a whole measure. */
-  --beat-dur:387ms;
-  --bar-dur:1548ms;
-  --beat-delay:0ms;
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -191,29 +185,16 @@ html.playing #grain{opacity:.34}
 .plate{position:absolute;inset:0;z-index:-3;overflow:hidden;background:#000}
 
 /* Two nested layers so each owns exactly one transform and they never
-   fight: .plate__cam is written by JS (pointer parallax only, and only
-   on a real mouse), .plate__beat is a pure CSS animation. */
+   fight: .plate__cam carries pointer parallax, .plate__beat carries the
+   kick. Both are written by JS directly on the element — never through
+   a :root custom property, which would restyle the whole document. */
 .plate__cam{
   position:absolute;inset:-6%;
   will-change:transform;
 }
-.plate__beat{position:absolute;inset:0}
-html.playing .plate__beat{
-  animation:camPush var(--bar-dur) linear infinite;
-  animation-delay:var(--beat-delay);
-  will-change:transform;
-}
-@keyframes camPush{
-  0%  {transform:scale(1.018)}
-  13% {transform:scale(1)}
-  25% {transform:scale(1.008)}
-  36% {transform:scale(1)}
-  50% {transform:scale(1.012)}
-  61% {transform:scale(1)}
-  75% {transform:scale(1.008)}
-  86% {transform:scale(1)}
-  100%{transform:scale(1)}
-}
+/* No keyframes: the scale is written per frame from the track's real
+   low-band envelope. It holds perfectly still whenever the record does. */
+.plate__beat{position:absolute;inset:0;will-change:transform}
 
 .plate__smoke{
   position:absolute;inset:-10%;
@@ -255,9 +236,12 @@ html.playing .plate__beat{
   to  {transform:translateX(-50%) scale(1.07) translateY(-1.5%)}
 }
 
-/* duotone wash + hard vignette — stays locked to the frame */
+/* duotone wash + hard vignette — stays locked to the frame.
+   Its opacity is driven by the track's broadband energy, so the hero
+   genuinely darkens through a breakdown and opens up on a drop. */
 .plate__grade{
   position:absolute;inset:0;
+  will-change:opacity;
   background:
     radial-gradient(ellipse 78% 68% at 50% 44%, transparent 30%, rgba(0,0,0,.86) 82%, #000 100%),
     linear-gradient(to bottom, rgba(0,0,0,.62) 0%, transparent 26%, transparent 58%, #000 96%),
@@ -414,22 +398,6 @@ html.playing .plate__beat{
 @keyframes ctabreathe{
   0%,100%{box-shadow:0 0 0 0 var(--glow),0 0 22px -6px var(--glow)}
   50%    {box-shadow:0 0 0 6px rgba(200,16,46,0),0 0 46px -2px var(--glow)}
-}
-/* while the track runs, the CTA glow rides the kick instead */
-html.playing .btn{
-  animation:ctaKick var(--bar-dur) linear infinite;
-  animation-delay:var(--beat-delay);
-}
-@keyframes ctaKick{
-  0%  {box-shadow:0 0 52px 0px var(--glow), 0 0 0 0 rgba(200,16,46,.42)}
-  15% {box-shadow:0 0 18px -8px var(--glow), 0 0 0 8px rgba(200,16,46,0)}
-  25% {box-shadow:0 0 30px -5px var(--glow)}
-  36% {box-shadow:0 0 18px -8px var(--glow)}
-  50% {box-shadow:0 0 38px -3px var(--glow)}
-  61% {box-shadow:0 0 18px -8px var(--glow)}
-  75% {box-shadow:0 0 30px -5px var(--glow)}
-  86% {box-shadow:0 0 18px -8px var(--glow)}
-  100%{box-shadow:0 0 18px -8px var(--glow)}
 }
 .btn:hover,.btn:focus-visible{background:var(--paper);color:var(--ink);border-color:var(--paper);transform:translate3d(0,-2px,0)}
 .btn:active{transform:translate3d(0,1px,0)}
@@ -723,21 +691,6 @@ section{position:relative;z-index:1}
   max-width:100%;
   position:relative;
 }
-.strip::before{
-  content:"";
-  position:absolute;inset:0;
-  background:rgba(200,16,46,.20);
-  opacity:0;
-  pointer-events:none;
-}
-html.playing .strip::before{
-  animation:stripPulse var(--bar-dur) linear infinite;
-  animation-delay:var(--beat-delay);
-  will-change:opacity;
-}
-@keyframes stripPulse{
-  0%{opacity:1} 16%{opacity:0} 50%{opacity:.55} 64%{opacity:0} 100%{opacity:0}
-}
 .strip__track{display:inline-flex;animation:marquee 34s linear infinite;will-change:transform}
 .strip__set{display:inline-flex;align-items:center;flex:none}
 .strip__item{
@@ -909,12 +862,6 @@ html:not(.entered) body{overflow:hidden}
   #roll{opacity:.035;animation-duration:9s}
   .plate__smoke{filter:contrast(2.4) brightness(.66);animation-duration:30s}
   .plate__light,.plate__figure{animation-duration:30s}
-  /* lighter push on phones */
-  @keyframes camPush{
-    0%{transform:scale(1.009)} 13%{transform:scale(1)}
-    50%{transform:scale(1.005)} 61%{transform:scale(1)}
-    100%{transform:scale(1)}
-  }
   .sticky{background:#000}
   .hero__bot{flex-direction:column;align-items:stretch}
   .hero__bot .btn{justify-content:center}
@@ -944,15 +891,14 @@ html:not(.entered) body{overflow:hidden}
   .shogun{transform:none;text-shadow:0 0 60px rgba(0,0,0,.9)}
   .shogun.glitch,.shogun.glitch::before,.shogun.glitch::after{animation:none}
   .shogun::before,.shogun::after{display:none}
-  html.playing .plate__beat,
   html.playing .wave__fill,
-  html.playing .strip::before,
   #grain::after{animation:none!important}
-  html.playing .strip::before{opacity:0}
-  .plate__beat{transform:none}
+  .plate__beat{transform:none!important}
+  .plate__grade{opacity:1!important}
+  #grain,html.playing #grain{opacity:.2!important}
   .shogun-shake{transform:none!important}
   .wave__fill{clip-path:inset(0 0 0 0)}
-  .btn,html.playing .btn,.gate__btn{animation:none;box-shadow:none}
+  .btn,.gate__btn{animation:none;box-shadow:none}
   .gate{transition:none}
   .strip__track{animation:none}
   .stamp{opacity:1;transform:none}
@@ -1226,10 +1172,6 @@ html:not(.entered) body{overflow:hidden}
   'use strict';
 
   /* ---- tune these two if the sync drifts ---- */
-  var BPM        = 155;   // hard techno; matches the --beat CSS var
-  var OFFSET_MS  = 0;     // nudge + / - to line the kick up with the track
-
-  var BEAT_MS = 60000 / BPM;
   var root    = document.documentElement;
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var narrow  = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
@@ -1260,7 +1202,7 @@ html:not(.entered) body{overflow:hidden}
   }
   if(!reduced){
     window.setTimeout(glitch, 380);
-    // idle re-arm; while the track plays the beat clock drives this instead
+    // idle re-arm; while the track plays, real drops drive this instead
     (function arm(){
       var lo = narrow ? 9000 : 5000, hi = narrow ? 19000 : 12000;
       window.setTimeout(function(){
@@ -1411,21 +1353,26 @@ html:not(.entered) body{overflow:hidden}
   }
 
   /* =========================================================
-     6. SoundCloud transport + the beat clock
+     6. SoundCloud transport + the reaction
 
-        SoundCloud's iframe is cross-origin, so real frequency
-        analysis is impossible. Instead every beat-driven effect is a
-        CSS animation one bar long, and JS phase-locks them all to the
-        track with a single negative animation-delay. After that the
-        compositor runs the motion and JS does nothing per frame.
+        SoundCloud's iframe is cross-origin, so the page cannot run a
+        live analyser on it. So the track was analysed ONCE, offline:
+        decoded to PCM, short-time Fourier transform, low-band energy
+        (20-150Hz) for the kick and broadband RMS for the arrangement.
+        The two envelopes below are that analysis. The page replays
+        them against the widget's reported position.
+
+        This is the real record, not a metronome. It sits still through
+        the 18-second intro because the intro is quiet. It drops out in
+        the breakdown at 2:00 because the track drops out. There is no
+        BPM constant in this file any more, deliberately: the old one
+        said 155 and the track is 161.5, so the old motion fell a full
+        beat behind every ten seconds. That is what read as random.
+
+        !!  THE ENVELOPES BELONG TO THIS ONE TRACK.  !!
+        Change the SoundCloud URL and they are wrong. README says how
+        to regenerate them.
      ========================================================= */
-
-  /* ---- tune these two if the sync drifts ---- */
-  var BPM       = 155;   // hard techno; matches the --beat-dur CSS var
-  var OFFSET_MS = 0;     // nudge + / - to line the kick up with the track
-
-  var BEAT_MS = 60000 / BPM;
-  var BAR_MS  = BEAT_MS * 4;
 
   var playing = false, userPaused = false, api = null;
   var durationMs = 0, syncPos = 0, syncAt = 0, lastSec = -1;
@@ -1436,12 +1383,114 @@ html:not(.entered) body{overflow:hidden}
     return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
   }
 
-  /* one write, at playback start — not sixty a second */
-  function lockBeatClock(positionMs){
-    var delay = -(((positionMs + OFFSET_MS) % BAR_MS));
-    root.style.setProperty('--beat-dur', BEAT_MS.toFixed(2) + 'ms');
-    root.style.setProperty('--bar-dur',  BAR_MS.toFixed(2)  + 'ms');
-    root.style.setProperty('--beat-delay', delay.toFixed(1) + 'ms');
+  /* ---------------------------------------------------------
+     The analysis. kick = 30 samples/sec of 20-150Hz energy,
+     energy = 7.5 samples/sec of broadband RMS, both quantised to
+     one byte. drops = the eleven seconds where the arrangement
+     actually steps up, measured, not guessed.
+     --------------------------------------------------------- */
+  var TRACK = {
+    durMs:    245967,
+    offsetMs: 0,        // nudge + / - if the reaction sits early or late
+    kickHz:   30,
+    enHz:     7.5,
+    drops:    [21.2,57.6,69.9,83.6,95.6,107.6,142.0,155.6,177.9,191.6,203.6],
+    kick:   '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',
+    energy: 'SDYtLTtCPjgwKScpMzk2MTIqKi8zLyojJiUoLSkpIiYwMCstNzkvKCosLDc/ODo3PUdTT0M7LjE9Q0RCMjU+Rz07PERDPjpDRUNHQkhKSkhGRk9MSVNZVVNraFpdWF9bXlJcWFZdZmJpX19kX2deYmJlYmNnXmNraWhnYWRfXmZhXGZsZmVxZ2JrZG1pa11yY2FjcWZxcG94anJzdXt9boWAdYt6cpB3eZeDk5J+nY6HsaPf8fT56vj16/zy9e767fvz6v/q9vnn+vTx9fXv+PPp/+n2+ej69e777fXx++ry8fH/7Pn45/3y9/H67P/17//r+vvp+/Ty8/Pt+fXo/+r2/eb19+r87vjvzq54+vf96vf66fry9+/76f/v7P/q+Pfo+PXx9/Lz9PPq/+r2+e31++z78Pfx9uXz8PX77PX46Pvv8/P27fzz8f/s+fjn+PXw+PPz9/Lr/+f4o355fXN+en5+hIiRtqqSlIiMhX6UfIeKhoJ7aGhfXlpcWH+IeoGBgX+KdoyAfHWEdF9sXFRMTUtNgn98cndmbnFxg32GgnNpYUpMQT48NFdvcHRya4N7foCAkIqOhI98iYR8g4afrquioZufm5Kkj5i1pJ6fmpmUkZmLj6axpJubk62fl5SJlqCXnJ+Wo5WErIeCqqShnaGalZ6UkJmOlIeCfnRpZFpVTEdKVlBWR1RYW2pmeGt1ZXRleXljk3zN6/L35fb15/zt9PL07/rv8v/q+/fn+ffz9fH19/Hs/+r6+ur29+v/7fjv+Ofw7/T65/f36f/x9vH37vzw9P/s/Pjo+/Hw+PH18fbo/+n3tXF7bHdmcnJkcWjS7vT15ff06vjt9fD57Pry7f/o+Pvq+PLx8vPv8/jq/+jz++j48+z57vLw+efu7PD76vX66vjw9fH47Pr07f/p+fnp+PHz9PTu+Pbq/+r1oXx0fXN3d3d/jpSY9vT56Pf26Prw9u736v/w7//o9vjo+PPv+PLz8vTp/+v4++r29+r77vXv9uPx7vT56fT46Pjx9PH17Prv7v/p9fbn+fPy9/Dw9vHq/+n4s3F8bHdmc3FlcWjP8vb87f748f3z+fH38P3z8f/r+Pfo+fPx9fDz8Pbo/+n2+uv49un67PHu+uTu7vP46Pf16/vu9vHMjG63g4Wsg5ecf6WKdayKerWDgal5eIB9g3qDgn2MmJ+g5NrR2820wbu6sKuqopCAeHFpaZKDdnd6cXF0d357h4F1dG9qbnlcWUtGR0FVgICBeHt6dIBzemKEfXJtdIaEYE5Kb5WIh4mHf3R7eH52eG5rcWdnbnSMgnxnf3SDiHtuZX91gXuAgnSYclROkW53cHeOe5OGfGF6jImFfIh4i39/gGRaVFpmjX2BiHiFe4V7cmOAgH2DenV9fHdZZW6KgYp+dYKBfoN1b3dzaXFtdHVzeHqPx///+v/myv////2w1v/8/vCk/9WhkaLB9/Pv76vl9PLwzKX39/PzwMj//fvvn/r8/P3etv/++fui3vvz9uej+9CilrDB9vLw6azi+PP21nyGfYKDioqCho2UyvT+/Pfnw//59/mi2P/7/fKp/9irj6DB8/Hw7Knk9fDty6fy9fbyvsz69vbqkvX///zdsv/69fif0/j1/u6n/9O3jq7K/PHu6bbm8u7u8fbz7vDq9e7v+e/2q42AgpWglYuEf36gjYCCiJebkJmXoJaOhZiOmY+Gk5qHiI2AkYKbkYCalYyDko6PhIaGh4mBjH6FhX1/hYN2d21sY1RFTUlQQlFUVWBdcmBsYHRid35nloDL7e/75vj46Pvs+PD36v7v8//p+fjo/PT08vf38fXr/+r4/Oj4+Or68Pfv+Ojv7fP75/j25v/x9/H48Prw7f/o+Pfn9/Xv9vL29PPt/+v4pGtoaWBpY2JpcbX+7fD56vj16Pnu9PD16frt7/3p9/np9vTw8/Pw9fLr/+n2+uf39Or87/Pv5tSQ+PX96vT05vnu9fD16/vu7v/p9/fn9fLw9/Px8Pfq/+75vXN/b3hmcXFjcGrT9Pb56/328Pj09fX57vzz7P/n9fjo9/Px9PXv8/Xl/+r2++b28uz57/fs9OXm7u785/T55/nw8+336vzz7v/o9vbp9fLx7/b07/Pp/+r2++v5eGBrz+tu6cW88PD35fb36vjw9+/77Pny7//p+vnm9fTx9fLx8vPp/+r4+en09ev57/Xv9uPw7fH56vf26vfy9fT06/vw8v/o/Pzp+uzw8+b06uze7bS3m5N4fIt8c3iEfYeS1dHJv7W2sKupoKGZk5GIiIJ9cWtwZ2RZV05NSkdEQDk6Njc1NDU1OjYyMjIvNDQwNzUyJyQtLSsoJi0pJygwMS8wMDAyNzEvNTA5NTcxNjxCOUFFRkhJS0hISkhHSD5EOTkuKigmIh4aGBQREA4MCgkIBwcGBQQEAwMCAgICAQEBAQEBAQEA'
+  };
+
+  function unpack(b64){
+    try{
+      var bin = atob(b64), n = bin.length, out = new Uint8Array(n);
+      for(var i = 0; i < n; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }catch(err){ return null; }
+  }
+  var KICK = unpack(TRACK.kick), ENERGY = unpack(TRACK.energy);
+
+  /* linear interpolation between samples, so a 30Hz envelope still
+     reads smooth at 120fps */
+  function sampleEnv(arr, hz, ms){
+    if(!arr || !arr.length) return 0;
+    var t = (ms + TRACK.offsetMs) / 1000 * hz;
+    if(t <= 0) return arr[0] / 255;
+    var i = t | 0;
+    if(i >= arr.length - 1) return arr[arr.length - 1] / 255;
+    var f = t - i;
+    return (arr[i] * (1 - f) + arr[i + 1] * f) / 255;
+  }
+
+  /* The three elements the reaction is allowed to touch. Writing a
+     custom property on :root instead would invalidate style for the
+     whole document — measured at 6.7ms/frame against a 16.7ms budget.
+     Writing straight to the element costs 1.75ms. */
+  var plateBeat  = document.querySelector('.plate__beat');
+  var plateGrade = document.querySelector('.plate__grade');
+  var grainEl    = document.getElementById('grain');
+
+  var KICK_RANGE  = narrow ? 0.009 : 0.018;   // how far the hero pushes
+  var GRAIN_BASE  = narrow ? 0.17  : 0.26;
+  var GRAIN_RANGE = narrow ? 0.07  : 0.11;
+
+  /* A hard techno bassline never returns to silence, so the raw
+     low-band level sits on a high floor and the kick is only the peak
+     above it. Read the local floor and ceiling straight out of the
+     data either side of the playhead and take the kick as the distance
+     between them — otherwise the hero just sits permanently zoomed in
+     and jitters, which is the failure mode this replaced. */
+  function localRange(arr, hz, ms, halfSec){
+    var c  = (ms + TRACK.offsetMs) / 1000 * hz;
+    var a  = (c - halfSec * hz) | 0, b = (c + halfSec * hz) | 0;
+    if(a < 0) a = 0;
+    if(b > arr.length - 1) b = arr.length - 1;
+    var lo = 255, hi = 0;
+    for(var i = a; i <= b; i++){
+      var v = arr[i];
+      if(v < lo) lo = v;
+      if(v > hi) hi = v;
+    }
+    return [lo / 255, hi / 255];
+  }
+
+  var rafId = 0, kEnv = 0, eEnv = 0;
+
+  function reactFrame(){
+    rafId = 0;
+    if(!playing || reduced) return;
+    var pos = syncPos + (performance.now() - syncAt);
+    var k = sampleEnv(KICK,   TRACK.kickHz, pos);
+    var e = sampleEnv(ENERGY, TRACK.enHz,   pos);
+
+    var r = KICK ? localRange(KICK, TRACK.kickHz, pos, 1.2) : [0, 1];
+    var span = r[1] - r[0];
+    var hit  = span > 0.02 ? (k - r[0]) / span : 0;
+    if(hit < 0) hit = 0; else if(hit > 1) hit = 1;
+
+    /* instant attack, eased release — a kick has to land, not swell */
+    kEnv = hit > kEnv ? hit : kEnv + (hit - kEnv) * 0.30;
+    eEnv += (e - eEnv) * 0.08;
+
+    /* loudness squared gates the amount, so the intro and the
+       breakdown get a fraction of the push the drop gets */
+    var push = kEnv * eEnv * eEnv * KICK_RANGE;
+    if(plateBeat)  plateBeat.style.transform = 'scale(' + (1 + push).toFixed(5) + ')';
+    if(plateGrade) plateGrade.style.opacity  = (1 - eEnv * 0.20).toFixed(3);
+    if(grainEl)    grainEl.style.opacity     = (GRAIN_BASE + eEnv * GRAIN_RANGE).toFixed(3);
+
+    rafId = requestAnimationFrame(reactFrame);
+  }
+  function startReaction(){
+    if(!rafId && playing && !reduced) rafId = requestAnimationFrame(reactFrame);
+  }
+  function stopReaction(){
+    if(rafId){ cancelAnimationFrame(rafId); rafId = 0; }
+    kEnv = eEnv = 0;
+    if(plateBeat)  plateBeat.style.transform = '';
+    if(plateGrade) plateGrade.style.opacity  = '';
+    if(grainEl)    grainEl.style.opacity     = '';
+  }
+
+  function syncTo(positionMs){
     syncPos = positionMs;
     syncAt  = performance.now();
   }
@@ -1461,20 +1510,21 @@ html:not(.entered) body{overflow:hidden}
     }
     phraseTimers = [];
   }
+  /* The glitch and the tracking tear now fire on the eleven measured
+     drops instead of every fourth bar. Eleven in four minutes instead
+     of forty, and every one of them lands on something. */
   function startPhrases(positionMs){
     stopPhrases();
     if(reduced) return;
-    var gEvery = BAR_MS * 4;                          // glitch every 4 bars
-    var tEvery = BAR_MS * 8;                          // tracking tear every 8
-    var pos = positionMs + OFFSET_MS;
-    phraseTimers.push(setTimeout(function(){
-      glitch();
-      phraseTimers.push(setInterval(glitch, gEvery));
-    }, gEvery - (pos % gEvery)));
-    phraseTimers.push(setTimeout(function(){
-      trackingTear();
-      phraseTimers.push(setInterval(trackingTear, tEvery));
-    }, tEvery - (pos % tEvery)));
+    var pos = positionMs + TRACK.offsetMs;
+    for(var i = 0; i < TRACK.drops.length; i++){
+      var wait = TRACK.drops[i] * 1000 - pos;
+      if(wait < 60) continue;
+      phraseTimers.push(setTimeout(function(){
+        glitch();
+        phraseTimers.push(setTimeout(trackingTear, 150));
+      }, wait));
+    }
   }
 
   function setPlaying(on){
@@ -1488,7 +1538,8 @@ html:not(.entered) body{overflow:hidden}
     if(wave) wave.classList.toggle('is-live', on);
     if(waveFill) waveFill.style.animationPlayState = on ? 'running' : 'paused';
     if(on) dropGate();
-    if(!on) stopPhrases();
+    if(on) startReaction();
+    if(!on){ stopPhrases(); stopReaction(); }
   }
 
   function onProgress(rel, cur){
@@ -1501,21 +1552,26 @@ html:not(.entered) body{overflow:hidden}
     }
     if(!playing) return;
 
-    /* The CSS animations run on wall-clock, so they only diverge from
-       the track on a seek or a stall. Re-lock only when that actually
-       happens — a re-lock is visible, so it must stay rare. */
+    /* Keep the local clock glued to the widget. A big jump means a
+       seek or a stall, so everything is rebuilt; a small one is just
+       drift, and is eased out rather than snapped, which would show
+       up as a stutter in the hero. */
     var expected = syncPos + (performance.now() - syncAt);
-    if(Math.abs(pos - expected) > 250){
-      lockBeatClock(pos);
+    var err = pos - expected;
+    if(Math.abs(err) > 250){
+      syncTo(pos);
       startFill(pos);
       startPhrases(pos);
+    } else if(Math.abs(err) > 12){
+      syncPos += err * 0.25;
     }
   }
 
   function beginAt(positionMs){
-    lockBeatClock(positionMs);
+    syncTo(positionMs);
     startFill(positionMs);
     startPhrases(positionMs);
+    startReaction();
   }
 
   if(window.SC && SC.Widget && iframe){
