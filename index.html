@@ -290,18 +290,6 @@ html.playing .plate__beat{
 .lockup--head .logo{width:clamp(122px,15.5vw,182px)}
 .lockup--foot .logo{width:clamp(172px,26vw,296px)}
 
-/* the mark breathes with the kick, gently */
-html.playing .logo{
-  animation:logoKick var(--bar-dur) linear infinite;
-  animation-delay:var(--beat-delay);
-  will-change:transform;
-}
-@keyframes logoKick{
-  0%{transform:scale(1.02)} 14%{transform:scale(1)}
-  50%{transform:scale(1.01)} 62%{transform:scale(1)}
-  100%{transform:scale(1)}
-}
-
 .hero__top .kicker{text-align:right;line-height:1.9}
 
 .hero__mid{margin-block:clamp(18px,4vh,44px);text-align:center}
@@ -335,18 +323,6 @@ html.playing .logo{
 /* scroll-velocity smear lives on the wrapper so the beat scale below
    never has to share a transform with it */
 .shogun-shake{display:block;will-change:transform}
-html.playing .shogun{
-  animation:shogunKick var(--bar-dur) linear infinite;
-  animation-delay:var(--beat-delay);
-  will-change:transform;
-}
-@keyframes shogunKick{
-  0%  {transform:scale(1.014)}
-  12% {transform:scale(1)}
-  50% {transform:scale(1.007)}
-  60% {transform:scale(1)}
-  100%{transform:scale(1)}
-}
 .shogun::before,.shogun::after{
   content:attr(data-text);
   position:absolute;
@@ -997,9 +973,7 @@ html:not(.entered) body{overflow:hidden}
   .shogun{transform:none;text-shadow:0 0 60px rgba(0,0,0,.9)}
   .shogun.glitch,.shogun.glitch::before,.shogun.glitch::after{animation:none}
   .shogun::before,.shogun::after{display:none}
-  html.playing .logo,
   html.playing .plate__beat,
-  html.playing .shogun,
   html.playing .wave__fill,
   html.playing .strip::before,
   #grain::after{animation:none!important}
