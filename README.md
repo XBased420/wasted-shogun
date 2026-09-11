@@ -35,9 +35,14 @@ var BPM       = 155;  // track tempo
 var OFFSET_MS = 0;    // nudge +/- to line the kick up with the audio
 ```
 
-Driven by the clock: hero push, CTA glow, the PRESS PLAY ring, the waveform, the
-hazard strip, the logo, a glitch every 4 bars and a VHS tracking tear every 8.
-The clock re-locks only on a seek, never on a timer.
+Driven by the clock: hero push, CTA glow, the PRESS PLAY ring, the hazard strip,
+the logo, a glitch every 4 bars and a VHS tracking tear every 8. The clock
+re-locks only on a seek, never on a timer.
+
+**The waveform is not beat-reactive.** It reads as playback position only — one
+`clip-path` animation running the length of the track. It used to also bounce on
+the kick; that was removed because the bounce read as random against the music.
+Don't reattach it to the beat clock.
 
 **No full-page brightness flashing.** Both flash layers were removed deliberately —
 a constant fluorescent flicker (`#strobe`) and a beat-synced radial pulse
@@ -56,7 +61,8 @@ The motion system deliberately avoids two things that cost a lot on phones:
    element that uses them (pointer parallax on `.plate__cam`, scroll smear on
    `.shogun-shake`). Everything else is a CSS animation.
 2. **The waveform fill is one `clip-path` animation** running the length of the
-   track, not per-bar class toggling across 64 elements. It cannot step.
+   track, not per-bar class toggling across 64 elements. It cannot step, and it
+   carries no beat animation at all.
 
 Measured on a 4x-CPU-throttled 400px profile, scrolling the full page with the
 beat motion running: **59.5fps, zero long tasks, 544ms style recalc** (was 50.3fps
