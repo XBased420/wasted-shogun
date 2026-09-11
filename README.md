@@ -35,9 +35,16 @@ var BPM       = 155;  // track tempo
 var OFFSET_MS = 0;    // nudge +/- to line the kick up with the audio
 ```
 
-Driven by the clock: hero push, CTA glow, the PRESS PLAY ring, the hazard strip
-tint, a glitch every 4 bars and a VHS tracking tear every 8. The clock re-locks
-only on a seek, never on a timer.
+Driven by the clock: hero push, CTA glow, the hazard strip tint, a glitch every
+4 bars and a VHS tracking tear every 8. The clock re-locks only on a seek, never
+on a timer.
+
+**The PRESS PLAY button does not animate at all.** It carried three: an idle
+heartbeat (`kick`), a beat ring while playing (`pressKick`), and a light sweep
+across the label (`wipe`). All removed. Two of them used `steps()` easing, which
+made them snap rather than glide — that is what read as a twitch. The button
+still changes state (red border and text while playing, play/pause icon, hover
+flip); it just holds still.
 
 **No type moves with the music.** The WA$TED mark (header and footer) and the
 `SHOGUN` headline used to scale on the kick — `logoKick` and `shogunKick`. Both
