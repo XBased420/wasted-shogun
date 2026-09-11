@@ -35,11 +35,18 @@ var BPM       = 155;  // track tempo
 var OFFSET_MS = 0;    // nudge +/- to line the kick up with the audio
 ```
 
-Driven by the clock: hero push, CTA glow, the PRESS PLAY ring, the hazard strip,
-the logo, a glitch every 4 bars and a VHS tracking tear every 8. The clock
-re-locks only on a seek, never on a timer.
+Driven by the clock: hero push, CTA glow, the PRESS PLAY ring, the hazard strip
+tint, a glitch every 4 bars and a VHS tracking tear every 8. The clock re-locks
+only on a seek, never on a timer.
 
-**The waveform is not beat-reactive.** It reads as playback position only — one
+**No type moves with the music.** The WA$TED mark (header and footer) and the
+`SHOGUN` headline used to scale on the kick — `logoKick` and `shogunKick`. Both
+were removed. Lettering that pulses at a fixed BPM drifts against the track's
+real transients and reads as twitchy rather than musical, which is the same
+problem that took out the waveform bounce and the flash layers. Keep the type
+still; put beat motion on surfaces and glows instead.
+
+**The waveform is not beat-reactive either.** It reads as playback position only — one
 `clip-path` animation running the length of the track. It used to also bounce on
 the kick; that was removed because the bounce read as random against the music.
 Don't reattach it to the beat clock.
