@@ -32,7 +32,6 @@
   --blood-hot:#FF1E3C;
   --gold:#CCC163;            /* WA$TED official mark */
   --hair:rgba(237,237,232,.16);
-  --beat:387ms;              /* ~155 BPM, idle PRESS PLAY pulse */
 
   /* Beat clock. Set ONCE when playback starts, never per frame.
      Every beat-driven animation below reads these, so they all stay
@@ -459,41 +458,13 @@ html.playing .btn{
   color:var(--paper);
   border:1px solid var(--paper);
   cursor:pointer;
-  overflow:hidden;
-  animation:kick calc(var(--beat) * 2) steps(1,end) infinite;
-}
-@keyframes kick{
-  0%   {box-shadow:inset 0 0 0 0 rgba(237,237,232,.9),0 0 0 0 rgba(237,237,232,.5);transform:scale(1.018)}
-  6%   {box-shadow:inset 0 0 0 0 rgba(237,237,232,0),0 0 0 10px rgba(237,237,232,0);transform:scale(1)}
-  50%  {box-shadow:inset 0 0 0 0 rgba(237,237,232,.45),0 0 0 0 rgba(237,237,232,.28);transform:scale(1.009)}
-  56%  {box-shadow:inset 0 0 0 0 rgba(237,237,232,0),0 0 0 8px rgba(237,237,232,0);transform:scale(1)}
-  100% {box-shadow:inset 0 0 0 0 rgba(237,237,232,0);transform:scale(1)}
 }
 .press:hover,.press:focus-visible{background:var(--paper);color:var(--ink)}
 .press.is-playing{
   border-color:var(--blood);
   color:var(--blood-hot);
-  animation:pressKick var(--bar-dur) linear infinite;
-  animation-delay:var(--beat-delay);
-  will-change:transform;
-}
-@keyframes pressKick{
-  0%  {transform:scale(1.026); box-shadow:0 0 0 0 rgba(200,16,46,.32), inset 0 0 28px -6px rgba(200,16,46,.55)}
-  14% {transform:scale(1);     box-shadow:0 0 0 9px rgba(200,16,46,0), inset 0 0 0 -6px rgba(200,16,46,0)}
-  50% {transform:scale(1.013); box-shadow:0 0 0 0 rgba(200,16,46,.18), inset 0 0 18px -6px rgba(200,16,46,.4)}
-  62% {transform:scale(1);     box-shadow:0 0 0 7px rgba(200,16,46,0), inset 0 0 0 -6px rgba(200,16,46,0)}
-  100%{transform:scale(1);     box-shadow:0 0 0 0 rgba(200,16,46,0)}
 }
 .press.is-playing:hover{background:var(--blood);color:var(--paper)}
-.press::after{
-  content:"";position:absolute;inset:0;
-  background:linear-gradient(90deg,transparent,rgba(237,237,232,.22),transparent);
-  transform:translateX(-120%);
-  animation:wipe 3.6s steps(24,end) infinite;
-  pointer-events:none;
-}
-@keyframes wipe{0%,70%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
-.press.is-playing::after{animation:none;opacity:0}
 
 .press__icon{
   width:0;height:0;
@@ -981,9 +952,8 @@ html:not(.entered) body{overflow:hidden}
   .plate__beat{transform:none}
   .shogun-shake{transform:none!important}
   .wave__fill{clip-path:inset(0 0 0 0)}
-  .btn,html.playing .btn,.press,.press::after,.gate__btn{animation:none;box-shadow:none}
+  .btn,html.playing .btn,.gate__btn{animation:none;box-shadow:none}
   .gate{transition:none}
-  .press.is-playing{transform:none}
   .strip__track{animation:none}
   .stamp{opacity:1;transform:none}
   .stamp.slam,.flashline.slam{animation:none}
